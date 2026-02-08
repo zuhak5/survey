@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminHeatmap } from "@/components/admin/AdminHeatmap";
+import { AdminTable } from "@/components/admin/AdminTable";
 import type { RouteCluster } from "@/lib/types";
 
 type FilterState = {
@@ -29,6 +30,7 @@ function toQueryString(filters: FilterState): string {
 
 export function AdminDashboard() {
   const [clusters, setClusters] = useState<RouteCluster[]>([]);
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     date_from: "",
     date_to: "",
@@ -43,9 +45,32 @@ export function AdminDashboard() {
 
   const csvUrl = useMemo(() => `/api/admin/export-csv?${toQueryString(filters)}`, [filters]);
 
+  const selectedCluster = useMemo(
+    () => clusters.find((cluster) => cluster.cluster_id === selectedClusterId) ?? null,
+    [clusters, selectedClusterId],
+  );
+
+  const stats = useMemo(() => {
+    const total = clusters.length;
+    const lowSample = clusters.filter((cluster) => cluster.sample_count < 5).length;
+    const lowConfidence = clusters.filter((cluster) => cluster.confidence_score < 0.5).length;
+    const latestUpdated = clusters.reduce<string | null>((acc, cluster) => {
+      if (!cluster.last_updated) {
+        return acc;
+      }
+      if (!acc) {
+        return cluster.last_updated;
+      }
+      return Date.parse(cluster.last_updated) > Date.parse(acc) ? cluster.last_updated : acc;
+    }, null);
+
+    return { total, lowSample, lowConfidence, latestUpdated };
+  }, [clusters]);
+
   const fetchClusters = useCallback(async () => {
     setLoading(true);
     setMessage(null);
+    setSelectedClusterId(null);
 
     const query = toQueryString(filters);
     const response = await fetch(`/api/admin/clusters?${query}`, { cache: "no-store" });
@@ -179,8 +204,88 @@ export function AdminDashboard() {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-bold text-slate-900">Heatmap</h2>
-        <AdminHeatmap clusters={clusters} />
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Heatmap</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Total clusters: {stats.total} | Low sample (&lt;5): {stats.lowSample} | Low confidence
+              (&lt;0.5): {stats.lowConfidence}
+              {stats.latestUpdated ? ` | Last updated: ${stats.latestUpdated}` : ""}
+            </p>
+          </div>
+          {selectedCluster && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              <div className="font-bold">Selected</div>
+              <div className="font-mono">{selectedCluster.cluster_id}</div>
+            </div>
+          )}
+        </div>
+
+        <AdminHeatmap
+          clusters={clusters}
+          selectedClusterId={selectedClusterId}
+          onSelectCluster={setSelectedClusterId}
+        />
+
+        {selectedCluster && (
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold text-slate-500">Median / IQR</p>
+              <p className="mt-1 text-2xl font-black text-slate-900">
+                {selectedCluster.median_price} <span className="text-base font-bold">IQD</span>
+              </p>
+              <p className="mt-1 text-sm text-slate-700">IQR: {selectedCluster.iqr_price}</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Variance:{" "}
+                {selectedCluster.price_variance === null
+                  ? "-"
+                  : Number(selectedCluster.price_variance).toFixed(0)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold text-slate-500">Samples / Confidence</p>
+              <p className="mt-1 text-2xl font-black text-slate-900">{selectedCluster.sample_count}</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Confidence: {Number(selectedCluster.confidence_score).toFixed(2)}
+              </p>
+              <p className="mt-1 text-sm text-slate-700">Updated: {selectedCluster.last_updated ?? "-"}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold text-slate-500">Dimensions</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Vehicle: <span className="font-semibold">{selectedCluster.vehicle_type ?? "any"}</span>
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                Hour:{" "}
+                <span className="font-semibold">{selectedCluster.time_bucket ?? -1}</span> | Day:{" "}
+                <span className="font-semibold">{selectedCluster.day_of_week ?? -1}</span>
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                  onClick={() => setSelectedClusterId(null)}
+                >
+                  Clear selection
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(selectedCluster.cluster_id);
+                      setMessage("Cluster ID copied.");
+                    } catch {
+                      setMessage("Unable to copy cluster ID.");
+                    }
+                  }}
+                >
+                  Copy cluster_id
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -191,42 +296,11 @@ export function AdminDashboard() {
             {clusters.filter((cluster) => cluster.sample_count < 5).length}
           </p>
         </div>
-        <div className="overflow-auto">
-          <table className="min-w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-100 text-right text-slate-700">
-                <th className="px-2 py-2">cluster_id</th>
-                <th className="px-2 py-2">start centroid</th>
-                <th className="px-2 py-2">end centroid</th>
-                <th className="px-2 py-2">median</th>
-                <th className="px-2 py-2">iqr</th>
-                <th className="px-2 py-2">count</th>
-                <th className="px-2 py-2">confidence</th>
-                <th className="px-2 py-2">updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clusters.map((cluster) => (
-                <tr key={cluster.cluster_id} className="border-b border-slate-100">
-                  <td className="px-2 py-2 font-mono text-xs">{cluster.cluster_id}</td>
-                  <td className="px-2 py-2">
-                    {Number(cluster.centroid_start_lat).toFixed(4)},{" "}
-                    {Number(cluster.centroid_start_lng).toFixed(4)}
-                  </td>
-                  <td className="px-2 py-2">
-                    {Number(cluster.centroid_end_lat).toFixed(4)},{" "}
-                    {Number(cluster.centroid_end_lng).toFixed(4)}
-                  </td>
-                  <td className="px-2 py-2">{cluster.median_price}</td>
-                  <td className="px-2 py-2">{cluster.iqr_price}</td>
-                  <td className="px-2 py-2">{cluster.sample_count}</td>
-                  <td className="px-2 py-2">{Number(cluster.confidence_score).toFixed(2)}</td>
-                  <td className="px-2 py-2">{cluster.last_updated ?? "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AdminTable
+          clusters={clusters}
+          selectedClusterId={selectedClusterId}
+          onSelectCluster={setSelectedClusterId}
+        />
       </section>
     </div>
   );
