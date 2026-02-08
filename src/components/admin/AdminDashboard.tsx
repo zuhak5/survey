@@ -1,0 +1,233 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminHeatmap } from "@/components/admin/AdminHeatmap";
+import type { RouteCluster } from "@/lib/types";
+
+type FilterState = {
+  date_from: string;
+  date_to: string;
+  min_count: string;
+  min_confidence: string;
+  vehicle_type: string;
+  time_bucket: string;
+  day_of_week: string;
+};
+
+function toQueryString(filters: FilterState): string {
+  const params = new URLSearchParams();
+  if (filters.date_from) params.set("date_from", new Date(filters.date_from).toISOString());
+  if (filters.date_to) params.set("date_to", new Date(filters.date_to).toISOString());
+  if (filters.min_count) params.set("min_count", filters.min_count);
+  if (filters.min_confidence) params.set("min_confidence", filters.min_confidence);
+  if (filters.vehicle_type) params.set("vehicle_type", filters.vehicle_type);
+  if (filters.time_bucket) params.set("time_bucket", filters.time_bucket);
+  if (filters.day_of_week) params.set("day_of_week", filters.day_of_week);
+  params.set("limit", "500");
+  return params.toString();
+}
+
+export function AdminDashboard() {
+  const [clusters, setClusters] = useState<RouteCluster[]>([]);
+  const [filters, setFilters] = useState<FilterState>({
+    date_from: "",
+    date_to: "",
+    min_count: "3",
+    min_confidence: "0",
+    vehicle_type: "",
+    time_bucket: "",
+    day_of_week: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const csvUrl = useMemo(() => `/api/admin/export-csv?${toQueryString(filters)}`, [filters]);
+
+  const fetchClusters = useCallback(async () => {
+    setLoading(true);
+    setMessage(null);
+
+    const query = toQueryString(filters);
+    const response = await fetch(`/api/admin/clusters?${query}`, { cache: "no-store" });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setLoading(false);
+      setMessage(payload.error ?? "Failed to load cluster data.");
+      return;
+    }
+
+    setClusters(payload.clusters ?? []);
+    setLoading(false);
+  }, [filters]);
+
+  useEffect(() => {
+    void fetchClusters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function runAggregation() {
+    setMessage("Running aggregation...");
+    const response = await fetch("/api/admin/run-aggregation", { method: "POST" });
+    const payload = await response.json();
+    if (!response.ok) {
+      setMessage(payload.error ?? "Aggregation failed.");
+      return;
+    }
+    setMessage(
+      `Aggregation complete: ${payload.clusters_refreshed} clusters, ${payload.feature_rows_upserted} feature rows.`,
+    );
+    await fetchClusters();
+  }
+
+  async function exportTrainingData() {
+    setMessage("Preparing training export...");
+    const response = await fetch("/api/admin/export-training", { method: "POST" });
+    const payload = await response.json();
+    if (!response.ok) {
+      setMessage(payload.error ?? "Training export failed.");
+      return;
+    }
+    setMessage(`Training export created: ${payload.file_path} (${payload.row_count} rows).`);
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-900">Filters</h2>
+        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-7">
+          <input
+            type="datetime-local"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Date from"
+            value={filters.date_from}
+            onChange={(event) => setFilters((prev) => ({ ...prev, date_from: event.target.value }))}
+          />
+          <input
+            type="datetime-local"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Date to"
+            value={filters.date_to}
+            onChange={(event) => setFilters((prev) => ({ ...prev, date_to: event.target.value }))}
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Min count"
+            value={filters.min_count}
+            onChange={(event) => setFilters((prev) => ({ ...prev, min_count: event.target.value }))}
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Min confidence 0..1"
+            value={filters.min_confidence}
+            onChange={(event) =>
+              setFilters((prev) => ({ ...prev, min_confidence: event.target.value }))
+            }
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Vehicle type"
+            value={filters.vehicle_type}
+            onChange={(event) => setFilters((prev) => ({ ...prev, vehicle_type: event.target.value }))}
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Hour 0-23"
+            value={filters.time_bucket}
+            onChange={(event) => setFilters((prev) => ({ ...prev, time_bucket: event.target.value }))}
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Day 0-6"
+            value={filters.day_of_week}
+            onChange={(event) => setFilters((prev) => ({ ...prev, day_of_week: event.target.value }))}
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            onClick={fetchClusters}
+            disabled={loading}
+          >
+            {loading ? "Loading..." : "Load clusters"}
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
+            onClick={runAggregation}
+          >
+            Run aggregation now
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white"
+            onClick={exportTrainingData}
+          >
+            Export training data
+          </button>
+          <a
+            href={csvUrl}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Download CSV
+          </a>
+        </div>
+
+        {message && <p className="mt-3 text-sm font-medium text-slate-700">{message}</p>}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="mb-3 text-lg font-bold text-slate-900">Heatmap</h2>
+        <AdminHeatmap clusters={clusters} />
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Cluster Table</h2>
+          <p className="text-sm text-slate-600">
+            Total: {clusters.length} | Low sample (&lt;5):{" "}
+            {clusters.filter((cluster) => cluster.sample_count < 5).length}
+          </p>
+        </div>
+        <div className="overflow-auto">
+          <table className="min-w-full border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-100 text-right text-slate-700">
+                <th className="px-2 py-2">cluster_id</th>
+                <th className="px-2 py-2">start centroid</th>
+                <th className="px-2 py-2">end centroid</th>
+                <th className="px-2 py-2">median</th>
+                <th className="px-2 py-2">iqr</th>
+                <th className="px-2 py-2">count</th>
+                <th className="px-2 py-2">confidence</th>
+                <th className="px-2 py-2">updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clusters.map((cluster) => (
+                <tr key={cluster.cluster_id} className="border-b border-slate-100">
+                  <td className="px-2 py-2 font-mono text-xs">{cluster.cluster_id}</td>
+                  <td className="px-2 py-2">
+                    {Number(cluster.centroid_start_lat).toFixed(4)},{" "}
+                    {Number(cluster.centroid_start_lng).toFixed(4)}
+                  </td>
+                  <td className="px-2 py-2">
+                    {Number(cluster.centroid_end_lat).toFixed(4)},{" "}
+                    {Number(cluster.centroid_end_lng).toFixed(4)}
+                  </td>
+                  <td className="px-2 py-2">{cluster.median_price}</td>
+                  <td className="px-2 py-2">{cluster.iqr_price}</td>
+                  <td className="px-2 py-2">{cluster.sample_count}</td>
+                  <td className="px-2 py-2">{Number(cluster.confidence_score).toFixed(2)}</td>
+                  <td className="px-2 py-2">{cluster.last_updated ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
