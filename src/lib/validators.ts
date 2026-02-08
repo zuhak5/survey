@@ -6,13 +6,15 @@ const latLngSchema = z.object({
 });
 
 export const submitRouteSchema = z.object({
-  driver_id: z.string().uuid().optional(),
-  client_request_id: z.string().trim().min(8).max(128).optional(),
+  client_request_id: z.string().trim().min(8).max(128),
   start: latLngSchema,
   end: latLngSchema,
-  price: z.number().int().min(500).max(200_000),
-  vehicle_type: z.string().trim().min(1).max(30).optional(),
-  traffic_level: z.number().int().min(1).max(5).optional(),
+  start_label: z.string().trim().min(1).max(200).optional(),
+  end_label: z.string().trim().min(1).max(200).optional(),
+  time_of_day: z.enum(["day", "night"]),
+  traffic_level: z.number().int().min(1).max(3),
+  eta_s: z.number().int().min(0).max(86_400).optional(),
+  price: z.number().int().min(1_000).max(200_000),
 });
 
 export type SubmitRoutePayload = z.infer<typeof submitRouteSchema>;

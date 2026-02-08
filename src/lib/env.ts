@@ -10,8 +10,8 @@ function readPublicEnv(key: (typeof requiredPublic)[number]): string {
 
 export const publicEnv = {
   NEXT_PUBLIC_SUPABASE_URL:
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "public-anon-key",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "http://localhost:54321",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "public-anon-key",
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
   NEXT_PUBLIC_DISABLE_MAPS: process.env.NEXT_PUBLIC_DISABLE_MAPS === "1",
   NEXT_PUBLIC_TEST_AUTH_BYPASS: process.env.NEXT_PUBLIC_TEST_AUTH_BYPASS === "1",
