@@ -75,11 +75,18 @@ Apply migrations in order:
 2. `supabase/migrations/202602080002_rls_policies.sql`
 3. `supabase/migrations/202602080003_storage.sql`
 
-If using Supabase CLI:
+If using Supabase CLI (recommended for repeatability):
 
 ```bash
+# If linking works in your environment:
 supabase link --project-ref onhhfzzkjoqxfeotleqo
-supabase db push
+supabase db push --include-all
+```
+
+If `supabase db push` fails to connect (common on networks without IPv6), use the IPv4 pooler DB URL directly:
+
+```bash
+supabase db push --include-all --db-url "postgresql://postgres.onhhfzzkjoqxfeotleqo:YOUR_DB_PASSWORD@aws-1-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require"
 ```
 
 ## Aggregation Jobs
