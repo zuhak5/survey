@@ -18,7 +18,7 @@
         "name": "next"
       }
     ],
-    "types": ["jest", "node", "google.maps"],
+    "types": ["node", "google.maps"],
     "paths": {
       "@/*": ["./src/*"]
     }
@@ -31,5 +31,14 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "e2e",
+    "playwright.config.ts",
+    "src/**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
 }
