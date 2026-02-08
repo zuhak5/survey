@@ -20,15 +20,15 @@ export async function GET(request: NextRequest) {
 
   if (
     parsedTimeBucket !== undefined &&
-    (!Number.isInteger(parsedTimeBucket) || parsedTimeBucket < 0 || parsedTimeBucket > 23)
+    (!Number.isInteger(parsedTimeBucket) || parsedTimeBucket < -1 || parsedTimeBucket > 23)
   ) {
-    return jsonError("Invalid time_bucket. Expected integer 0..23", 400);
+    return jsonError("Invalid time_bucket. Expected integer -1..23", 400);
   }
   if (
     parsedDayOfWeek !== undefined &&
-    (!Number.isInteger(parsedDayOfWeek) || parsedDayOfWeek < 0 || parsedDayOfWeek > 6)
+    (!Number.isInteger(parsedDayOfWeek) || parsedDayOfWeek < -1 || parsedDayOfWeek > 6)
   ) {
-    return jsonError("Invalid day_of_week. Expected integer 0..6", 400);
+    return jsonError("Invalid day_of_week. Expected integer -1..6", 400);
   }
 
   let suggestion = fallbackSuggestResponse(start, end);
