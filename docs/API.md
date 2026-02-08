@@ -4,24 +4,25 @@ Base URL (local): `http://localhost:3000`
 
 ## `POST /api/submit-route`
 
-Submit one driver route + price observation.
+Submit one route + price observation (anonymous, no signup required).
 
 ### Request JSON
 
 ```json
 {
-  "driver_id": "11111111-1111-4111-8111-111111111111",
-  "client_request_id": "mobile-2026-02-08T10:31:00.000Z-42",
+  "client_request_id": "3a07b0e6-80d2-4a1c-9b38-1d3e1d4d9f4a",
   "start": { "lat": 33.3128, "lng": 44.3615 },
   "end": { "lat": 33.3152, "lng": 44.3661 },
-  "price": 9000,
-  "vehicle_type": "sedan",
-  "traffic_level": 3
+  "start_label": "المنصور، بغداد",
+  "end_label": "الكرادة، بغداد",
+  "time_of_day": "day",
+  "traffic_level": 2,
+  "eta_s": 900,
+  "price": 9000
 }
 ```
 
-`driver_id` is optional for authenticated users; it is auto-derived from Supabase Auth session.
-`client_request_id` is optional and enables idempotent submit behavior per driver.
+`client_request_id` is required and enables idempotent submit behavior.
 
 ### Response 200
 
@@ -41,8 +42,11 @@ Query aggregated pricing recommendation from clustered submissions.
 - `start=lat,lng` (required)
 - `end=lat,lng` (required)
 - `vehicle_type` (optional)
-- `time_bucket` (optional, 0-23)
-- `day_of_week` (optional, 0-6)
+- `time_bucket` (optional, -1..23)
+- `day_of_week` (optional, -1..6)
+
+Notes:
+- `-1` means "any" bucket (used by the anonymous day/night flow which aggregates across weekdays).
 
 ### Response 200
 

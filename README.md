@@ -13,13 +13,12 @@ Production-ready MVP for collecting driver-submitted route prices, clustering su
 
 ## Implemented MVP
 
-- `/` survey flow: start pin -> end pin -> 3 price presets + custom -> submit
-- Supabase auth UI (phone/email OTP) + driver profile sync
+- `/` survey flow (anonymous): start pin -> end pin -> route shown (distance + ETA + names) -> day/night + traffic -> wheel price + custom -> submit
 - `POST /api/submit-route`
 - Nightly aggregation (`refresh_route_clusters`) + confidence score
 - `GET /api/suggest-price`
 - `/admin` protected dashboard (heatmap + table + filters + CSV export)
-- RLS policies for driver/admin access model
+- RLS policies for admin access model (survey inserts are performed server-side)
 - Vercel cron endpoint (`/api/cron/aggregate`)
 
 ## Implemented Phase-2 foundations
@@ -51,7 +50,7 @@ SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_JS_KEY
 CRON_SECRET=YOUR_CRON_SECRET
 
-# Optional for local testing without live OTP/DB
+# Optional for local testing without live Supabase
 NEXT_PUBLIC_DISABLE_MAPS=1
 NEXT_PUBLIC_TEST_AUTH_BYPASS=1
 TEST_AUTH_BYPASS_ENABLED=1
@@ -74,6 +73,7 @@ Apply migrations in order:
 1. `supabase/migrations/202602080001_initial_schema.sql`
 2. `supabase/migrations/202602080002_rls_policies.sql`
 3. `supabase/migrations/202602080003_storage.sql`
+4. `supabase/migrations/202602080012_anonymous_survey.sql`
 
 If using Supabase CLI (recommended for repeatability):
 
@@ -113,12 +113,12 @@ Core endpoints:
 
 ## Security (RLS)
 
-- Drivers:
-  - insert own submissions only
-  - read own submissions only
 - Admin (`app_metadata.role = "admin"`):
   - read/aggregate all data
   - write cluster/feature/training metadata
+- Public survey flow:
+  - `POST /api/submit-route` inserts using `SUPABASE_SERVICE_ROLE_KEY`
+  - direct client inserts to `public.submissions` remain blocked by RLS
 - Tests:
   - SQL RLS test script at `supabase/tests/rls.sql`
 
@@ -142,12 +142,7 @@ npm run load:test
 2. Set all env vars from **Environment Variables** section.
 3. Deploy from `main`.
 4. Confirm cron exists (Project Settings -> Cron Jobs).
-5. Ensure Supabase Auth providers (Phone OTP / Email OTP) are enabled.
-
-## Supabase Auth Notes
-
-- Driver profile row is auto-created via trigger on `auth.users`.
-- App also calls `POST /api/profile/sync` after OTP verification for idempotent profile sync.
+5. For `/admin`, ensure at least one Supabase Auth provider is enabled (Email OTP is simplest).
 
 ## Admin Access
 
@@ -164,7 +159,6 @@ Set admin claim in Supabase Auth:
 ## Definition of Done Checklist
 
 - [x] Survey flow with minimal taps and Arabic microcopy
-- [x] Supabase auth integration + driver profile
 - [x] Raw submissions schema + API
 - [x] Cluster aggregation + confidence
 - [x] Suggest-price + predict-price stub APIs
