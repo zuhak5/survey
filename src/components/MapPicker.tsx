@@ -16,6 +16,7 @@ type MapPickerProps = {
   end: LatLng | null;
   activeStep: "start" | "end";
   onSelectPoint: (kind: "start" | "end", point: LatLng, label: string | null) => void;
+  selectionEnabled: boolean;
   timeOfDay: "day" | "night";
   trafficLevel: 1 | 2 | 3;
   onRouteInfo: (info: RouteInfo | null) => void;
@@ -72,6 +73,7 @@ export function MapPicker({
   end,
   activeStep,
   onSelectPoint,
+  selectionEnabled,
   timeOfDay,
   trafficLevel,
   onRouteInfo,
@@ -84,6 +86,7 @@ export function MapPicker({
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const selectionEnabledRef = useRef(selectionEnabled);
 
   const mapsEnabled =
     !publicEnv.NEXT_PUBLIC_DISABLE_MAPS &&
@@ -104,6 +107,10 @@ export function MapPicker({
     },
     [],
   );
+
+  useEffect(() => {
+    selectionEnabledRef.current = selectionEnabled;
+  }, [selectionEnabled]);
 
   useEffect(() => {
     if (!mapsEnabled || !mapElementRef.current) {
@@ -146,6 +153,9 @@ export function MapPicker({
         });
 
         map.addListener("click", async (event: google.maps.MapMouseEvent) => {
+          if (!selectionEnabledRef.current) {
+            return;
+          }
           if (!event.latLng) {
             return;
           }
@@ -322,6 +332,7 @@ export function MapPicker({
         <button
           type="button"
           className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+          disabled={!selectionEnabled}
           onClick={() =>
             onSelectPoint(
               activeStep,

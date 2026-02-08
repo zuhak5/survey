@@ -277,6 +277,7 @@ export function SurveyApp() {
             end={endPlace?.point ?? null}
             activeStep={activeMapStep}
             onSelectPoint={onSelectPoint}
+            selectionEnabled={step === "start" || step === "end"}
             timeOfDay={timeOfDay}
             trafficLevel={trafficLevel}
             onRouteInfo={onRouteInfo}
