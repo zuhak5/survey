@@ -75,18 +75,18 @@ export function AdminTable({ clusters, selectedClusterId, onSelectCluster }: Adm
       <table className="min-w-full border-collapse text-sm">
         <thead>
           <tr className="bg-slate-100 text-right text-slate-700">
-            <th className="px-2 py-2">cluster_id</th>
-            <th className="px-2 py-2">dims</th>
-            <th className="px-2 py-2">start</th>
-            <th className="px-2 py-2">end</th>
+            <th className="px-2 py-2">المعرّف</th>
+            <th className="px-2 py-2">الأبعاد</th>
+            <th className="px-2 py-2">البداية</th>
+            <th className="px-2 py-2">النهاية</th>
             <th className="px-2 py-2">
               <button type="button" className="font-bold" onClick={() => toggleSort("median_price")}>
-                median
+                الوسيط
               </button>
             </th>
             <th className="px-2 py-2">
               <button type="button" className="font-bold" onClick={() => toggleSort("iqr_price")}>
-                iqr
+                IQR
               </button>
             </th>
             <th className="px-2 py-2">
@@ -95,12 +95,12 @@ export function AdminTable({ clusters, selectedClusterId, onSelectCluster }: Adm
                 className="font-bold"
                 onClick={() => toggleSort("price_variance")}
               >
-                variance
+                التباين
               </button>
             </th>
             <th className="px-2 py-2">
               <button type="button" className="font-bold" onClick={() => toggleSort("sample_count")}>
-                count
+                العدد
               </button>
             </th>
             <th className="px-2 py-2">
@@ -109,12 +109,12 @@ export function AdminTable({ clusters, selectedClusterId, onSelectCluster }: Adm
                 className="font-bold"
                 onClick={() => toggleSort("confidence_score")}
               >
-                conf
+                الثقة
               </button>
             </th>
             <th className="px-2 py-2">
               <button type="button" className="font-bold" onClick={() => toggleSort("last_updated")}>
-                updated
+                التحديث
               </button>
             </th>
           </tr>
@@ -144,9 +144,9 @@ export function AdminTable({ clusters, selectedClusterId, onSelectCluster }: Adm
               >
                 <td className="px-2 py-2 font-mono text-xs">{cluster.cluster_id}</td>
                 <td className="px-2 py-2 text-xs text-slate-700">
-                  <div className="font-semibold">{cluster.vehicle_type ?? "any"}</div>
+                  <div className="font-semibold">{cluster.vehicle_type ?? "أي"}</div>
                   <div className="text-[11px] text-slate-500">
-                    h:{cluster.time_bucket ?? -1} d:{cluster.day_of_week ?? -1}
+                    س:{cluster.time_bucket ?? -1} ي:{cluster.day_of_week ?? -1}
                   </div>
                 </td>
                 <td className="px-2 py-2">

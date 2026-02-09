@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { publicEnv } from "@/lib/env";
 import { haversineDistanceMeters, type LatLng } from "@/lib/pricing";
@@ -80,61 +80,79 @@ export function MapPicker({
 }: MapPickerProps) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+
   const startMarkerRef = useRef<google.maps.Marker | null>(null);
   const endMarkerRef = useRef<google.maps.Marker | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+
   const [mapReady, setMapReady] = useState(false);
+
   const selectionEnabledRef = useRef(selectionEnabled);
+  const activeStepRef = useRef(activeStep);
+  const onSelectPointRef = useRef(onSelectPoint);
+  const fitKeyRef = useRef<string | null>(null);
+  const routeRequestIdRef = useRef(0);
 
   const mapsEnabled =
     !publicEnv.NEXT_PUBLIC_DISABLE_MAPS &&
     publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.trim().length > 0;
 
-  const reverseGeocode = useCallback(
-    async (point: LatLng): Promise<string | null> => {
-      if (!geocoderRef.current) {
-        return null;
-      }
+  async function reverseGeocode(point: LatLng): Promise<string | null> {
+    if (!geocoderRef.current) {
+      return null;
+    }
 
-      try {
-        const response = await geocoderRef.current.geocode({ location: point });
-        return response.results[0]?.formatted_address ?? null;
-      } catch {
-        return null;
-      }
-    },
-    [],
-  );
+    try {
+      const response = await geocoderRef.current.geocode({ location: point });
+      return response.results[0]?.formatted_address ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   useEffect(() => {
     selectionEnabledRef.current = selectionEnabled;
   }, [selectionEnabled]);
 
   useEffect(() => {
-    if (!mapsEnabled || !mapElementRef.current) {
+    activeStepRef.current = activeStep;
+  }, [activeStep]);
+
+  useEffect(() => {
+    onSelectPointRef.current = onSelectPoint;
+  }, [onSelectPoint]);
+
+  useEffect(() => {
+    if (!mapsEnabled || !mapElementRef.current || mapRef.current) {
       return;
     }
 
     setOptions({
       key: publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
       v: "weekly",
+      language: "ar",
+      region: "IQ",
     });
 
     let mounted = true;
     Promise.all([importLibrary("maps"), importLibrary("routes")])
       .then(() => {
-        if (!mounted || !mapElementRef.current) {
+        if (!mounted || !mapElementRef.current || mapRef.current) {
           return;
         }
 
         const map = new window.google.maps.Map(mapElementRef.current, {
-          center: start ?? baghdadCenter,
+          center: baghdadCenter,
           zoom: 13,
+          clickableIcons: false,
+          gestureHandling: "greedy",
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
+          zoomControl: true,
         });
 
         geocoderRef.current = new window.google.maps.Geocoder();
@@ -143,7 +161,7 @@ export function MapPicker({
         directionsServiceRef.current = new google.maps.DirectionsService();
         directionsRendererRef.current = new google.maps.DirectionsRenderer({
           map,
-          preserveViewport: false,
+          preserveViewport: true,
           suppressMarkers: true,
           polylineOptions: {
             strokeColor: "#0f172a",
@@ -152,18 +170,21 @@ export function MapPicker({
           },
         });
 
-        map.addListener("click", async (event: google.maps.MapMouseEvent) => {
-          if (!selectionEnabledRef.current) {
-            return;
-          }
-          if (!event.latLng) {
-            return;
-          }
+        clickListenerRef.current = map.addListener(
+          "click",
+          async (event: google.maps.MapMouseEvent) => {
+            if (!selectionEnabledRef.current) {
+              return;
+            }
+            if (!event.latLng) {
+              return;
+            }
 
-          const point = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-          const label = await reverseGeocode(point);
-          onSelectPoint(activeStep, point, label);
-        });
+            const point = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+            const label = await reverseGeocode(point);
+            onSelectPointRef.current(activeStepRef.current, point, label);
+          },
+        );
 
         setMapReady(true);
       })
@@ -171,8 +192,10 @@ export function MapPicker({
 
     return () => {
       mounted = false;
+      clickListenerRef.current?.remove();
+      clickListenerRef.current = null;
     };
-  }, [activeStep, mapsEnabled, onSelectPoint, reverseGeocode, start]);
+  }, [mapsEnabled]);
 
   useEffect(() => {
     if (!mapRef.current || !mapReady) {
@@ -204,6 +227,23 @@ export function MapPicker({
       endMarkerRef.current.setMap(null);
       endMarkerRef.current = null;
     }
+
+    // Fit the viewport once per (start,end) so the map doesn't jump on traffic changes.
+    if (!start || !end) {
+      fitKeyRef.current = null;
+      return;
+    }
+
+    const nextKey = `${start.lat.toFixed(5)},${start.lng.toFixed(5)}|${end.lat.toFixed(5)},${end.lng.toFixed(5)}`;
+    if (fitKeyRef.current === nextKey) {
+      return;
+    }
+    fitKeyRef.current = nextKey;
+
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(start);
+    bounds.extend(end);
+    mapRef.current.fitBounds(bounds, 80);
   }, [end, mapReady, start]);
 
   useEffect(() => {
@@ -237,9 +277,7 @@ export function MapPicker({
       return;
     }
 
-    directionsRendererRef.current.setDirections(
-      { routes: [] } as unknown as google.maps.DirectionsResult,
-    );
+    const requestId = (routeRequestIdRef.current += 1);
 
     const trafficModel =
       trafficLevel === 1
@@ -265,7 +303,7 @@ export function MapPicker({
     (async () => {
       try {
         const result = await directionsServiceRef.current!.route(request);
-        if (cancelled) {
+        if (cancelled || requestId !== routeRequestIdRef.current) {
           return;
         }
 
@@ -284,12 +322,9 @@ export function MapPicker({
           provider: "google",
         });
       } catch {
-        if (cancelled) {
+        if (cancelled || requestId !== routeRequestIdRef.current) {
           return;
         }
-        directionsRendererRef.current!.setDirections(
-          { routes: [] } as unknown as google.maps.DirectionsResult,
-        );
         onRouteInfo({
           distance_m: fallbackDistance,
           eta_s: estimateEtaSeconds(fallbackDistance, timeOfDay, trafficLevel),
@@ -348,9 +383,20 @@ export function MapPicker({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div ref={mapElementRef} className="h-[320px] w-full" />
-      {!mapReady && <p className="p-3 text-sm text-slate-500">جاري تحميل الخريطة...</p>}
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div ref={mapElementRef} className="h-[340px] w-full" />
+
+      {!mapReady && (
+        <div className="absolute inset-0 grid place-items-center bg-white/70 backdrop-blur">
+          <p className="text-sm font-semibold text-slate-600">جاري تحميل الخريطة...</p>
+        </div>
+      )}
+
+      {mapReady && selectionEnabled && (
+        <div className="pointer-events-none absolute right-3 top-3 rounded-2xl bg-white/85 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+          {activeStep === "start" ? "اضغط لتحديد الانطلاق" : "اضغط لتحديد الوصول"}
+        </div>
+      )}
     </div>
   );
 }

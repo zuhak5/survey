@@ -78,7 +78,7 @@ export function AdminDashboard() {
 
     if (!response.ok) {
       setLoading(false);
-      setMessage(payload.error ?? "Failed to load cluster data.");
+      setMessage(payload.error ?? "فشل تحميل بيانات التجمعات.");
       return;
     }
 
@@ -92,58 +92,58 @@ export function AdminDashboard() {
   }, []);
 
   async function runAggregation() {
-    setMessage("Running aggregation...");
+    setMessage("جاري تشغيل التجميع...");
     const response = await fetch("/api/admin/run-aggregation", { method: "POST" });
     const payload = await response.json();
     if (!response.ok) {
-      setMessage(payload.error ?? "Aggregation failed.");
+      setMessage(payload.error ?? "فشل التجميع.");
       return;
     }
     setMessage(
-      `Aggregation complete: ${payload.clusters_refreshed} clusters, ${payload.feature_rows_upserted} feature rows.`,
+      `اكتمل التجميع: ${payload.clusters_refreshed} تجمع، و ${payload.feature_rows_upserted} سجل ميزات.`,
     );
     await fetchClusters();
   }
 
   async function exportTrainingData() {
-    setMessage("Preparing training export...");
+    setMessage("جاري تجهيز تصدير التدريب...");
     const response = await fetch("/api/admin/export-training", { method: "POST" });
     const payload = await response.json();
     if (!response.ok) {
-      setMessage(payload.error ?? "Training export failed.");
+      setMessage(payload.error ?? "فشل تصدير التدريب.");
       return;
     }
-    setMessage(`Training export created: ${payload.file_path} (${payload.row_count} rows).`);
+    setMessage(`تم إنشاء تصدير التدريب: ${payload.file_path} (${payload.row_count} صف).`);
   }
 
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">Filters</h2>
+        <h2 className="text-lg font-bold text-slate-900">المرشحات</h2>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-7">
           <input
             type="datetime-local"
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Date from"
+            placeholder="من"
             value={filters.date_from}
             onChange={(event) => setFilters((prev) => ({ ...prev, date_from: event.target.value }))}
           />
           <input
             type="datetime-local"
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Date to"
+            placeholder="إلى"
             value={filters.date_to}
             onChange={(event) => setFilters((prev) => ({ ...prev, date_to: event.target.value }))}
           />
           <input
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Min count"
+            placeholder="الحد الأدنى للعدد"
             value={filters.min_count}
             onChange={(event) => setFilters((prev) => ({ ...prev, min_count: event.target.value }))}
           />
           <input
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Min confidence 0..1"
+            placeholder="الحد الأدنى للثقة 0..1"
             value={filters.min_confidence}
             onChange={(event) =>
               setFilters((prev) => ({ ...prev, min_confidence: event.target.value }))
@@ -151,19 +151,19 @@ export function AdminDashboard() {
           />
           <input
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Vehicle type"
+            placeholder="نوع المركبة"
             value={filters.vehicle_type}
             onChange={(event) => setFilters((prev) => ({ ...prev, vehicle_type: event.target.value }))}
           />
           <input
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Hour 0-23"
+            placeholder="الساعة 0-23"
             value={filters.time_bucket}
             onChange={(event) => setFilters((prev) => ({ ...prev, time_bucket: event.target.value }))}
           />
           <input
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Day 0-6"
+            placeholder="اليوم 0-6"
             value={filters.day_of_week}
             onChange={(event) => setFilters((prev) => ({ ...prev, day_of_week: event.target.value }))}
           />
@@ -176,27 +176,27 @@ export function AdminDashboard() {
             onClick={fetchClusters}
             disabled={loading}
           >
-            {loading ? "Loading..." : "Load clusters"}
+            {loading ? "جاري التحميل..." : "تحميل التجمعات"}
           </button>
           <button
             type="button"
             className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
             onClick={runAggregation}
           >
-            Run aggregation now
+            تشغيل التجميع الآن
           </button>
           <button
             type="button"
             className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white"
             onClick={exportTrainingData}
           >
-            Export training data
+            تصدير بيانات التدريب
           </button>
           <a
             href={csvUrl}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
           >
-            Download CSV
+            تنزيل CSV
           </a>
         </div>
 
@@ -206,16 +206,16 @@ export function AdminDashboard() {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Heatmap</h2>
+            <h2 className="text-lg font-bold text-slate-900">الخريطة الحرارية</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Total clusters: {stats.total} | Low sample (&lt;5): {stats.lowSample} | Low confidence
+              إجمالي التجمعات: {stats.total} | عينات قليلة (&lt;5): {stats.lowSample} | ثقة منخفضة
               (&lt;0.5): {stats.lowConfidence}
-              {stats.latestUpdated ? ` | Last updated: ${stats.latestUpdated}` : ""}
+              {stats.latestUpdated ? ` | آخر تحديث: ${stats.latestUpdated}` : ""}
             </p>
           </div>
           {selectedCluster && (
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-              <div className="font-bold">Selected</div>
+              <div className="font-bold">المحدد</div>
               <div className="font-mono">{selectedCluster.cluster_id}</div>
             </div>
           )}
@@ -230,34 +230,34 @@ export function AdminDashboard() {
         {selectedCluster && (
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold text-slate-500">Median / IQR</p>
+              <p className="text-xs font-semibold text-slate-500">الوسيط / IQR</p>
               <p className="mt-1 text-2xl font-black text-slate-900">
-                {selectedCluster.median_price} <span className="text-base font-bold">IQD</span>
+                {selectedCluster.median_price} <span className="text-base font-bold">د.ع</span>
               </p>
               <p className="mt-1 text-sm text-slate-700">IQR: {selectedCluster.iqr_price}</p>
               <p className="mt-1 text-sm text-slate-700">
-                Variance:{" "}
+                التباين:{" "}
                 {selectedCluster.price_variance === null
                   ? "-"
                   : Number(selectedCluster.price_variance).toFixed(0)}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold text-slate-500">Samples / Confidence</p>
+              <p className="text-xs font-semibold text-slate-500">العينات / الثقة</p>
               <p className="mt-1 text-2xl font-black text-slate-900">{selectedCluster.sample_count}</p>
               <p className="mt-1 text-sm text-slate-700">
-                Confidence: {Number(selectedCluster.confidence_score).toFixed(2)}
+                الثقة: {Number(selectedCluster.confidence_score).toFixed(2)}
               </p>
-              <p className="mt-1 text-sm text-slate-700">Updated: {selectedCluster.last_updated ?? "-"}</p>
+              <p className="mt-1 text-sm text-slate-700">التحديث: {selectedCluster.last_updated ?? "-"}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold text-slate-500">Dimensions</p>
+              <p className="text-xs font-semibold text-slate-500">الأبعاد</p>
               <p className="mt-1 text-sm text-slate-700">
-                Vehicle: <span className="font-semibold">{selectedCluster.vehicle_type ?? "any"}</span>
+                المركبة: <span className="font-semibold">{selectedCluster.vehicle_type ?? "أي"}</span>
               </p>
               <p className="mt-1 text-sm text-slate-700">
-                Hour:{" "}
-                <span className="font-semibold">{selectedCluster.time_bucket ?? -1}</span> | Day:{" "}
+                الساعة:{" "}
+                <span className="font-semibold">{selectedCluster.time_bucket ?? -1}</span> | اليوم:{" "}
                 <span className="font-semibold">{selectedCluster.day_of_week ?? -1}</span>
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -266,7 +266,7 @@ export function AdminDashboard() {
                   className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
                   onClick={() => setSelectedClusterId(null)}
                 >
-                  Clear selection
+                  إلغاء التحديد
                 </button>
                 <button
                   type="button"
@@ -274,13 +274,13 @@ export function AdminDashboard() {
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(selectedCluster.cluster_id);
-                      setMessage("Cluster ID copied.");
+                      setMessage("تم نسخ رقم التجمع.");
                     } catch {
-                      setMessage("Unable to copy cluster ID.");
+                      setMessage("تعذر نسخ رقم التجمع.");
                     }
                   }}
                 >
-                  Copy cluster_id
+                  نسخ cluster_id
                 </button>
               </div>
             </div>
@@ -290,9 +290,9 @@ export function AdminDashboard() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Cluster Table</h2>
+          <h2 className="text-lg font-bold text-slate-900">جدول التجمعات</h2>
           <p className="text-sm text-slate-600">
-            Total: {clusters.length} | Low sample (&lt;5):{" "}
+            الإجمالي: {clusters.length} | عينات قليلة (&lt;5):{" "}
             {clusters.filter((cluster) => cluster.sample_count < 5).length}
           </p>
         </div>

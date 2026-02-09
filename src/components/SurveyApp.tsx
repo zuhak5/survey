@@ -159,6 +159,7 @@ export function SurveyApp() {
         setSuggestion(null);
         setSelectedPrice(null);
         setCustomPrice("");
+        setRouteInfo(null);
         setStep("end");
         return;
       }
@@ -239,7 +240,7 @@ export function SurveyApp() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
       <div className="rounded-3xl bg-white/85 p-5 shadow-lg ring-1 ring-slate-200 backdrop-blur">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">
               استبيان أسعار السائقين
@@ -266,9 +267,9 @@ export function SurveyApp() {
         <div className="mt-5 space-y-4">
           <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-sm font-semibold text-slate-700">
-              {step === "start" && "١) حدد نقطة الانطلاق"}
-              {step === "end" && "٢) حدد نقطة الوصول"}
-              {(step === "details" || step === "done") && "٣) اختر الوقت والازدحام والسعر"}
+              {step === "start" && "1) حدد نقطة الانطلاق"}
+              {step === "end" && "2) حدد نقطة الوصول"}
+              {(step === "details" || step === "done") && "3) اختر الوقت والازدحام والسعر"}
             </p>
           </section>
 
@@ -318,6 +319,7 @@ export function SurveyApp() {
                     setSuggestion(null);
                     setSelectedPrice(null);
                     setCustomPrice("");
+                    setRouteInfo(null);
                     setSuccessMessage(null);
                     setError(null);
                   }}
@@ -429,7 +431,7 @@ export function SurveyApp() {
 
                 {suggestion?.suggested_price ? (
                   <p className="mt-3 text-xs text-slate-600">
-                    توفّر بيانات لعدد{" "}
+                    توفر بيانات لعدد{" "}
                     <span className="font-bold text-slate-900">{suggestion.count}</span> رحلة مشابهة
                     (ثقة{" "}
                     <span className="font-bold text-slate-900">
@@ -438,7 +440,9 @@ export function SurveyApp() {
                     ).
                   </p>
                 ) : (
-                  <p className="mt-3 text-xs text-slate-600">سعر مقترح غير متوفر لهذه الرحلة حالياً.</p>
+                  <p className="mt-3 text-xs text-slate-600">
+                    سعر مقترح غير متوفر لهذه الرحلة حالياً.
+                  </p>
                 )}
               </section>
 
@@ -465,7 +469,7 @@ export function SurveyApp() {
                 onClick={submit}
                 disabled={submitting}
               >
-                {submitting ? "جارٍ الإرسال..." : "إرسال"}
+                {submitting ? "جاري الإرسال..." : "إرسال"}
               </button>
 
               {step === "done" && (
@@ -494,3 +498,4 @@ export function SurveyApp() {
     </main>
   );
 }
+

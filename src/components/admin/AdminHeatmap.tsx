@@ -44,6 +44,8 @@ export function AdminHeatmap({
     setOptions({
       key: publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
       v: "weekly",
+      language: "ar",
+      region: "IQ",
     });
 
     let mounted = true;
@@ -100,28 +102,28 @@ export function AdminHeatmap({
 
         const timeBucket =
           cluster.time_bucket === null || cluster.time_bucket === -1
-            ? "any"
+            ? "أي"
             : String(cluster.time_bucket);
         const dayOfWeek =
           cluster.day_of_week === null || cluster.day_of_week === -1
-            ? "any"
+            ? "أي"
             : String(cluster.day_of_week);
-        const vehicleType = cluster.vehicle_type ? String(cluster.vehicle_type) : "any";
+        const vehicleType = cluster.vehicle_type ? String(cluster.vehicle_type) : "أي";
         const variance =
           cluster.price_variance === null ? "-" : Number(cluster.price_variance).toFixed(0);
 
         const html = `
           <div style="font-family: ui-sans-serif, system-ui; min-width: 240px">
-            <div style="font-weight: 800; margin-bottom: 6px">Route Cluster</div>
+            <div style="font-weight: 800; margin-bottom: 6px">تجمع المسارات</div>
             <div style="font-size: 12px; color: #334155; margin-bottom: 6px">
-              <div><b>Median:</b> ${cluster.median_price} IQD</div>
+              <div><b>الوسيط:</b> ${cluster.median_price} د.ع</div>
               <div><b>IQR:</b> ${cluster.iqr_price}</div>
-              <div><b>Variance:</b> ${variance}</div>
-              <div><b>Count:</b> ${cluster.sample_count}</div>
-              <div><b>Confidence:</b> ${Number(cluster.confidence_score).toFixed(2)}</div>
-              <div><b>Vehicle:</b> ${vehicleType}</div>
-              <div><b>Hour:</b> ${timeBucket} | <b>Day:</b> ${dayOfWeek}</div>
-              <div><b>Updated:</b> ${cluster.last_updated ?? "-"}</div>
+              <div><b>التباين:</b> ${variance}</div>
+              <div><b>العدد:</b> ${cluster.sample_count}</div>
+              <div><b>الثقة:</b> ${Number(cluster.confidence_score).toFixed(2)}</div>
+              <div><b>المركبة:</b> ${vehicleType}</div>
+              <div><b>الساعة:</b> ${timeBucket} | <b>اليوم:</b> ${dayOfWeek}</div>
+              <div><b>التحديث:</b> ${cluster.last_updated ?? "-"}</div>
             </div>
             <div style="font-size: 11px; color: #64748b; word-break: break-all">
               ${cluster.cluster_id}

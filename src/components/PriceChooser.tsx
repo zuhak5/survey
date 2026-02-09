@@ -44,10 +44,10 @@ export function PriceChooser({
   onSelectPrice,
   onCustomPrice,
 }: PriceChooserProps) {
-  const base = useMemo(() => (suggestedPrice && suggestedPrice > 0 ? suggestedPrice : baselinePrice), [
-    baselinePrice,
-    suggestedPrice,
-  ]);
+  const base = useMemo(
+    () => (suggestedPrice && suggestedPrice > 0 ? suggestedPrice : baselinePrice),
+    [baselinePrice, suggestedPrice],
+  );
   const options = useMemo(() => buildWheelOptions(base), [base]);
   const selectValue = selectedPrice === null ? "" : String(selectedPrice);
 
