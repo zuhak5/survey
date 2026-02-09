@@ -20,6 +20,7 @@ type Suggestion = {
   suggested_price: number | null;
   confidence: number;
   count: number;
+  cluster_id: string | null;
 };
 
 function stepProgress(step: Step): number {
@@ -137,6 +138,7 @@ export function SurveyApp() {
           suggested_price: payload.suggested_price ?? null,
           confidence: payload.confidence ?? 0,
           count: payload.count ?? 0,
+          cluster_id: payload.cluster_id ?? null,
         });
       } catch {
         setSuggestion(null);
@@ -429,7 +431,7 @@ export function SurveyApp() {
                   </div>
                 </div>
 
-                {suggestion?.suggested_price ? (
+                {suggestion && suggestion.count > 0 && suggestion.suggested_price ? (
                   <p className="mt-3 text-xs text-slate-600">
                     توفر بيانات لعدد{" "}
                     <span className="font-bold text-slate-900">{suggestion.count}</span> رحلة مشابهة
@@ -441,14 +443,14 @@ export function SurveyApp() {
                   </p>
                 ) : (
                   <p className="mt-3 text-xs text-slate-600">
-                    سعر مقترح غير متوفر لهذه الرحلة حالياً.
+                    لا توجد بيانات كافية لرحلات مشابهة حتى الآن. السعر المبدئي يعتمد على المسافة.
                   </p>
                 )}
               </section>
 
               <PriceChooser
                 baselinePrice={baselinePrice}
-                suggestedPrice={suggestion?.suggested_price ?? null}
+                suggestedPrice={suggestion && suggestion.count > 0 ? suggestion.suggested_price : null}
                 selectedPrice={selectedPrice}
                 customPrice={customPrice}
                 onSelectPrice={(value) => {

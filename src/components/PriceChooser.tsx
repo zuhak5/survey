@@ -59,7 +59,10 @@ export function PriceChooser({
           سعر مقترح: <span className="font-bold text-slate-900">{formatIqd(suggestedPrice)}</span>
         </p>
       ) : (
-        <p className="mt-1 text-sm text-slate-600">اختر السعر المناسب للرحلة.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          سعر مبدئي حسب المسافة:{" "}
+          <span className="font-bold text-slate-900">{formatIqd(baselinePrice)}</span>
+        </p>
       )}
 
       <label className="mt-4 block text-xs font-semibold text-slate-500">عجلة السعر</label>
