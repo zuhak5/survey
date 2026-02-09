@@ -5,7 +5,7 @@ import { fetchClustersForAdmin } from "@/lib/admin-queries";
 import { jsonError } from "@/lib/http";
 
 export async function GET(request: NextRequest) {
-  const adminState = await assertAdmin();
+  const adminState = await assertAdmin(request);
   if (!adminState.ok) {
     return adminState.response;
   }

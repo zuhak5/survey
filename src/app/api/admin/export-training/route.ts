@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { assertAdmin } from "@/lib/require-admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { jsonError } from "@/lib/http";
@@ -22,8 +22,8 @@ function serializeCsv(rows: Record<string, unknown>[]): string {
   return [headers.join(","), ...records].join("\n");
 }
 
-export async function POST() {
-  const adminState = await assertAdmin();
+export async function POST(request: NextRequest) {
+  const adminState = await assertAdmin(request);
   if (!adminState.ok) {
     return adminState.response;
   }

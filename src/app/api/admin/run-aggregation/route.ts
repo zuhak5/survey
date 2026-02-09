@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { assertAdmin } from "@/lib/require-admin";
 import { jsonError } from "@/lib/http";
 import { runAggregationNow } from "@/lib/aggregation";
 
-export async function POST() {
-  const adminState = await assertAdmin();
+export async function POST(request: NextRequest) {
+  const adminState = await assertAdmin(request);
   if (!adminState.ok) {
     return adminState.response;
   }
