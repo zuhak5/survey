@@ -91,6 +91,7 @@ ML-ready prediction endpoint. For MVP it returns the suggest-price result plus s
 ## Admin APIs
 
 All admin endpoints require an authenticated user that exists in `public.admin_users`.
+Authentication can be via browser session cookies (admin UI) or `Authorization: Bearer <access_token>`.
 
 - `GET /api/admin/clusters` - filtered cluster table data for dashboard.
 - `GET /api/admin/export-csv` - CSV export of filtered cluster rows.
