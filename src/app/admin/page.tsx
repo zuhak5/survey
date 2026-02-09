@@ -47,10 +47,15 @@ export default async function AdminPage() {
     );
   }
 
+  const { data: governoratePricingRows } = await supabase
+    .from("governorate_pricing")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <h1 className="mb-6 text-3xl font-black text-slate-900">لوحة إدارة الأسعار</h1>
-      <AdminDashboard />
+      <AdminDashboard initialGovernoratePricing={governoratePricingRows ?? []} />
     </main>
   );
 }

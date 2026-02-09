@@ -31,3 +31,27 @@ export const clusterFilterSchema = z.object({
 });
 
 export type ClusterFilters = z.infer<typeof clusterFilterSchema>;
+
+export const governoratePricingRowSchema = z.object({
+  governorate_code: z.string().trim().min(2).max(40),
+  name_ar: z.string().trim().min(1).max(80),
+  name_en: z.string().trim().min(1).max(80),
+  sort_order: z.coerce.number().int().min(0).max(100),
+
+  base_fare_iqd: z.coerce.number().int().min(0).max(1_000_000),
+  time_fare_iqd_per_min: z.coerce.number().int().min(0).max(100_000),
+  distance_fare_iqd_per_km: z.coerce.number().int().min(0).max(100_000),
+  minimum_fare_iqd: z.coerce.number().int().min(0).max(1_000_000),
+
+  surge_multiplier: z.coerce.number().min(1).max(10),
+  surge_cap: z.coerce.number().min(1).max(10),
+  rounding_step_iqd: z.coerce.number().int().min(1).max(10_000),
+
+  notes: z.string().trim().max(500).optional().nullable(),
+});
+
+export const governoratePricingUpsertSchema = z.object({
+  rows: z.array(governoratePricingRowSchema).min(1).max(50),
+});
+
+export type GovernoratePricingRowInput = z.infer<typeof governoratePricingRowSchema>;

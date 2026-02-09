@@ -31,3 +31,20 @@ export type SuggestPriceResponse = {
   start: LatLng;
   end: LatLng;
 };
+
+export type GovernoratePricing = {
+  governorate_code: string;
+  name_ar: string;
+  name_en: string;
+  sort_order: number;
+  base_fare_iqd: number;
+  time_fare_iqd_per_min: number;
+  distance_fare_iqd_per_km: number;
+  minimum_fare_iqd: number;
+  surge_multiplier: number;
+  surge_cap: number;
+  rounding_step_iqd: number;
+  notes: string | null;
+  updated_by: string | null;
+  updated_at: string;
+};

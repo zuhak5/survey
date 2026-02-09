@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminHeatmap } from "@/components/admin/AdminHeatmap";
 import { AdminTable } from "@/components/admin/AdminTable";
-import type { RouteCluster } from "@/lib/types";
+import { GovernoratePricingPanel } from "@/components/admin/GovernoratePricingPanel";
+import type { GovernoratePricing, RouteCluster } from "@/lib/types";
 
 type FilterState = {
   date_from: string;
@@ -28,7 +29,7 @@ function toQueryString(filters: FilterState): string {
   return params.toString();
 }
 
-export function AdminDashboard() {
+export function AdminDashboard(props: { initialGovernoratePricing: GovernoratePricing[] }) {
   const [clusters, setClusters] = useState<RouteCluster[]>([]);
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
@@ -119,6 +120,8 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      <GovernoratePricingPanel initialRows={props.initialGovernoratePricing ?? []} />
+
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-lg font-bold text-slate-900">المرشحات</h2>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-7">
