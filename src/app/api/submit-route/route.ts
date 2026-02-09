@@ -11,6 +11,28 @@ function toTimeBucket(timeOfDay: "day" | "night"): number {
   return timeOfDay === "day" ? 12 : 22;
 }
 
+function estimateEtaSeconds(
+  distanceMeters: number,
+  timeOfDay: "day" | "night",
+  trafficLevel: 1 | 2 | 3,
+): number {
+  const distanceKm = distanceMeters / 1000;
+  const baseSpeedKmh = 28; // Baghdad-ish city baseline
+
+  let multiplier = 1;
+  if (timeOfDay === "night") {
+    multiplier *= 0.85;
+  }
+  if (trafficLevel === 1) {
+    multiplier *= 0.85;
+  } else if (trafficLevel === 3) {
+    multiplier *= 1.25;
+  }
+
+  const hours = (distanceKm / baseSpeedKmh) * multiplier;
+  return Math.max(60, Math.round(hours * 3600));
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const parsed = submitRouteSchema.safeParse(body);
@@ -20,6 +42,9 @@ export async function POST(request: NextRequest) {
 
   const payload = parsed.data;
   const distance_m = haversineDistanceMeters(payload.start, payload.end);
+  const eta_s =
+    payload.eta_s ??
+    estimateEtaSeconds(distance_m, payload.time_of_day, payload.traffic_level as 1 | 2 | 3);
   const bypassAllowed = serverEnv.TEST_AUTH_BYPASS_ENABLED;
 
   if (bypassAllowed && !serverEnv.SUPABASE_SERVICE_ROLE_KEY) {
@@ -44,7 +69,7 @@ export async function POST(request: NextRequest) {
     end_governorate_code: payload.end_governorate_code ?? null,
     price: payload.price,
     distance_m,
-    eta_s: payload.eta_s ?? null,
+    eta_s,
     time_bucket: toTimeBucket(payload.time_of_day),
     day_of_week: null,
     vehicle_type: null,
