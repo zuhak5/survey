@@ -34,7 +34,8 @@ export function AdminDashboard() {
   const [filters, setFilters] = useState<FilterState>({
     date_from: "",
     date_to: "",
-    min_count: "3",
+    // Start with a permissive threshold so new projects show data immediately.
+    min_count: "1",
     min_confidence: "0",
     vehicle_type: "",
     time_bucket: "",
