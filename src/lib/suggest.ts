@@ -7,7 +7,7 @@ import {
   type LatLng,
 } from "@/lib/pricing";
 import type { RouteCluster, SuggestPriceResponse } from "@/lib/types";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 
 type SuggestParams = {
   start: LatLng;
@@ -29,11 +29,11 @@ async function queryCandidateClusters(
   withTemporalFilters: boolean,
   withVehicleType: boolean,
 ): Promise<RouteCluster[]> {
-  const adminClient = createSupabaseAdminClient();
+  const client = createSupabasePublicClient();
   const startBuckets = neighboringBucketKeys(params.start);
   const endBuckets = neighboringBucketKeys(params.end);
 
-  let query = adminClient
+  let query = client
     .from("route_clusters")
     .select("*")
     .in("start_bucket", startBuckets)

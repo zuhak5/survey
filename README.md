@@ -18,8 +18,8 @@ Production-ready MVP for collecting driver-submitted route prices, clustering su
 - Nightly aggregation (`refresh_route_clusters`) + confidence score
 - `GET /api/suggest-price`
 - `/admin` protected dashboard (heatmap + table + filters + CSV export)
-- RLS policies for admin access model (survey inserts are performed server-side)
-- Vercel cron endpoint (`/api/cron/aggregate`)
+- RLS policies for admin access model (raw submissions remain protected; aggregated data powers suggestion API)
+- Nightly aggregation scheduled inside Postgres via `pg_cron` (see `202602090010_*`)
 
 ## Implemented Phase-2 foundations
 
@@ -46,8 +46,12 @@ Create `.env.local`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://onhhfzzkjoqxfeotleqo.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_JS_KEY
+
+# Optional (recommended for automation / server-side bypass of RLS when needed)
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+
+# Optional if you use `/api/cron/aggregate` (Vercel cron). Nightly aggregation is also scheduled via `pg_cron` in DB.
 CRON_SECRET=YOUR_CRON_SECRET
 
 # Optional for local testing without live Supabase
@@ -68,13 +72,6 @@ App: `http://localhost:3000`
 
 ## Database Setup (Supabase)
 
-Apply migrations in order:
-
-1. `supabase/migrations/202602080001_initial_schema.sql`
-2. `supabase/migrations/202602080002_rls_policies.sql`
-3. `supabase/migrations/202602080003_storage.sql`
-4. `supabase/migrations/202602080012_anonymous_survey.sql`
-
 If using Supabase CLI (recommended for repeatability):
 
 ```bash
@@ -93,8 +90,8 @@ supabase db push --include-all --db-url "postgresql://postgres.onhhfzzkjoqxfeotl
 
 - On-demand (script): `npm run aggregate:run`
 - On-demand (admin API): `POST /api/admin/run-aggregation`
-- Scheduled: `GET /api/cron/aggregate` (protected by `CRON_SECRET`)
-- Vercel cron schedule configured in `vercel.json` (`0 2 * * *`)
+- Scheduled (DB): `pg_cron` job `nightly_aggregation` created by `supabase/migrations/202602090010_public_survey_and_admin_fixes.sql`
+- Optional scheduled (HTTP): `GET /api/cron/aggregate` (protected by `CRON_SECRET`, requires `SUPABASE_SERVICE_ROLE_KEY`)
 
 ## API Endpoints
 
@@ -117,8 +114,8 @@ Core endpoints:
   - read/aggregate all data
   - write cluster/feature/training metadata
 - Public survey flow:
-  - `POST /api/submit-route` inserts using `SUPABASE_SERVICE_ROLE_KEY`
-  - direct client inserts to `public.submissions` remain blocked by RLS
+  - anonymous inserts to `public.submissions` are allowed (driver_id must be NULL; reads remain blocked)
+  - aggregated `public.route_clusters` are readable for suggestions (no raw submission data exposed)
 - Tests:
   - SQL RLS test script at `supabase/tests/rls.sql`
 

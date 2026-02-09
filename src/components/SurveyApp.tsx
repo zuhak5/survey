@@ -69,6 +69,10 @@ function timeBucketFor(timeOfDay: "day" | "night"): number {
   return timeOfDay === "day" ? 12 : 22;
 }
 
+function formatIqd(value: number): string {
+  return `${new Intl.NumberFormat("ar-IQ").format(Math.round(value))} د.ع`;
+}
+
 export function SurveyApp() {
   const [step, setStep] = useState<Step>("start");
   const [startPlace, setStartPlace] = useState<PlaceState | null>(null);
@@ -253,42 +257,111 @@ export function SurveyApp() {
 
   const activeMapStep = step === "start" || step === "end" ? step : "end";
 
+  const showRouteSummary = Boolean(startPlace || endPlace);
+  const showDetailsForm = Boolean(startPlace && endPlace && step === "details");
+  const showDone = step === "done";
+
+  const stepIndex = step === "start" ? 1 : step === "end" ? 2 : 3;
+  const stepTitle =
+    step === "start"
+      ? "حدد نقطة الانطلاق"
+      : step === "end"
+        ? "حدد نقطة الوصول"
+        : step === "details"
+          ? "اختر الوقت والازدحام والسعر"
+          : "تم الإرسال";
+
+  const stepHint =
+    step === "start"
+      ? "اضغط على الخريطة لتحديد الانطلاق. يمكنك استخدام زر «موقعي»."
+      : step === "end"
+        ? "اضغط مرة ثانية لتحديد الوصول. كلما كانت النقاط دقيقة، كانت النتائج أفضل."
+        : step === "details"
+          ? "اختر وقت الرحلة والازدحام ثم ضع السعر الحقيقي للمشوار."
+          : "شكراً لمساهمتك. هل يمكنك إرسال رحلة ثانية؟";
+
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
-      <div className="rounded-3xl bg-white/85 p-5 shadow-lg ring-1 ring-slate-200 backdrop-blur">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">
-              استبيان أسعار السائقين
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      <header className="rounded-3xl bg-white/85 p-6 shadow-lg ring-1 ring-slate-200 backdrop-blur">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="min-w-[260px] flex-1">
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800 ring-1 ring-emerald-100">
+                بدون تسجيل
+              </span>
+              <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-700 ring-1 ring-slate-200">
+                أقل من دقيقة
+              </span>
+              <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-black text-slate-700 ring-1 ring-slate-200">
+                بيانات مجهولة
+              </span>
+            </div>
+
+            <h1 className="mt-4 text-3xl font-black leading-tight text-slate-900 sm:text-4xl">
+              ساعدنا نبني{" "}
+              <span className="bg-gradient-to-l from-emerald-700 to-teal-600 bg-clip-text text-transparent">
+                تسعير أدق
+              </span>{" "}
+              للمشاوير في العراق
             </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              اضغط مرة لتحديد الانطلاق، ومرة لتحديد الوصول، ثم اختر الوقت والازدحام والسعر.
+            <p className="mt-2 max-w-2xl text-sm text-slate-700 sm:text-base">
+              حدد نقطتين على الخريطة، اختر وقت الرحلة والازدحام، ثم أدخل السعر الحقيقي. مساهمتك تجعل
+              الاقتراحات أدق مع الوقت.
             </p>
           </div>
-          <a
-            href="/admin"
-            className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-          >
-            لوحة الإدارة
-          </a>
+
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-black text-slate-600">التقدم</p>
+              <p className="text-xs font-black text-slate-900">خطوة {stepIndex} / 3</p>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-700 transition-all"
+                style={{ width: `${stepProgress(step)}%` }}
+              />
+            </div>
+            <p className="mt-3 text-sm font-extrabold text-slate-900">{stepTitle}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-600">{stepHint}</p>
+          </div>
         </div>
 
-        <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-          <div
-            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-700 transition-all"
-            style={{ width: `${stepProgress(step)}%` }}
-          />
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          {[
+            { key: "start", label: "الانطلاق" },
+            { key: "end", label: "الوصول" },
+            { key: "details", label: "السعر" },
+          ].map((s) => {
+            const isCurrent =
+              (s.key === "start" && step === "start") ||
+              (s.key === "end" && step === "end") ||
+              (s.key === "details" && (step === "details" || step === "done"));
+            const isComplete =
+              (s.key === "start" && (step === "end" || step === "details" || step === "done")) ||
+              (s.key === "end" && (step === "details" || step === "done")) ||
+              (s.key === "details" && step === "done");
+
+            return (
+              <div
+                key={s.key}
+                className={`rounded-2xl px-3 py-3 text-center ring-1 transition ${
+                  isCurrent
+                    ? "bg-emerald-600 text-white ring-emerald-600"
+                    : isComplete
+                      ? "bg-emerald-50 text-emerald-900 ring-emerald-100"
+                      : "bg-white text-slate-900 ring-slate-200"
+                }`}
+              >
+                <p className="text-xs font-black opacity-80">خطوة</p>
+                <p className="mt-0.5 text-sm font-black">{s.label}</p>
+              </div>
+            );
+          })}
         </div>
+      </header>
 
-        <div className="mt-5 space-y-4">
-          <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-sm font-semibold text-slate-700">
-              {step === "start" && "1) حدد نقطة الانطلاق"}
-              {step === "end" && "2) حدد نقطة الوصول"}
-              {(step === "details" || step === "done") && "3) اختر الوقت والازدحام والسعر"}
-            </p>
-          </section>
-
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
+        <div className="space-y-4 lg:col-span-7">
           <MapPicker
             start={startPlace?.point ?? null}
             end={endPlace?.point ?? null}
@@ -300,34 +373,19 @@ export function SurveyApp() {
             onRouteInfo={onRouteInfo}
           />
 
-          {(startPlace || endPlace) && (
+          {showRouteSummary && (
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-base font-bold text-slate-900">ملخص المسار</h2>
-              <p className="mt-2 text-sm text-slate-700">
-                <span className="font-semibold">من:</span>{" "}
-                {startPlace?.label ?? "غير محدد"}
-              </p>
-              <p className="mt-1 text-sm text-slate-700">
-                <span className="font-semibold">إلى:</span> {endPlace?.label ?? "غير محدد"}
-              </p>
-
-              {startPlace && endPlace && (
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                    المسافة:{" "}
-                    <span className="font-bold">{formatDistance(routeInfo?.distance_m ?? 0)}</span>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                    الوقت المتوقع:{" "}
-                    <span className="font-bold">{formatEta(routeInfo?.eta_s ?? 0)}</span>
-                  </div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-black text-slate-900">ملخص المسار</h2>
+                  <p className="mt-1 text-xs font-semibold text-slate-600">
+                    تأكد من صحة النقطتين قبل إدخال السعر.
+                  </p>
                 </div>
-              )}
 
-              <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
                   onClick={() => {
                     setStep("start");
                     setStartPlace(null);
@@ -342,34 +400,92 @@ export function SurveyApp() {
                 >
                   إعادة اختيار المسار
                 </button>
-                {startPlace && !endPlace && (
-                  <button
-                    type="button"
-                    className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-                    onClick={() => setStep("end")}
-                  >
-                    التالي
-                  </button>
-                )}
               </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                  <p className="text-xs font-black text-slate-500">من</p>
+                  <p className="mt-1 text-sm font-black text-slate-900">
+                    {startPlace?.label ?? "غير محدد"}
+                  </p>
+                  {startPlace?.governorate_name && (
+                    <p className="mt-1 text-xs font-semibold text-slate-600">
+                      {startPlace.governorate_name}
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                  <p className="text-xs font-black text-slate-500">إلى</p>
+                  <p className="mt-1 text-sm font-black text-slate-900">
+                    {endPlace?.label ?? "غير محدد"}
+                  </p>
+                  {endPlace?.governorate_name && (
+                    <p className="mt-1 text-xs font-semibold text-slate-600">
+                      {endPlace.governorate_name}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {startPlace && endPlace && (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-900 ring-1 ring-slate-200">
+                    <p className="text-xs font-black text-slate-500">المسافة</p>
+                    <p className="mt-1 text-base font-black">
+                      {formatDistance(routeInfo?.distance_m ?? 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-900 ring-1 ring-slate-200">
+                    <p className="text-xs font-black text-slate-500">الوقت المتوقع</p>
+                    <p className="mt-1 text-base font-black">{formatEta(routeInfo?.eta_s ?? 0)}</p>
+                  </div>
+                </div>
+              )}
             </section>
           )}
+        </div>
 
-          {startPlace && endPlace && step !== "start" && step !== "end" && (
+        <div className="space-y-4 lg:col-span-5 lg:sticky lg:top-6">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-black text-slate-900">{stepTitle}</h2>
+                <p className="mt-1 text-sm text-slate-600">{stepHint}</p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
+                {stepIndex}/3
+              </span>
+            </div>
+
+            {step === "end" && startPlace && !endPlace && (
+              <div className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-100">
+                تم تحديد الانطلاق. الآن حدد الوصول.
+              </div>
+            )}
+
+            {step === "start" && !startPlace && (
+              <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                نصيحة: إذا كنت داخل السيارة، استخدم زر «موقعي» لتحديد الانطلاق بسرعة.
+              </div>
+            )}
+          </section>
+
+          {showDetailsForm && (
             <>
               <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 className="text-base font-bold text-slate-900">وقت الرحلة والازدحام</h2>
+                <h2 className="text-base font-black text-slate-900">وقت الرحلة والازدحام</h2>
 
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <p className="text-xs font-semibold text-slate-500">وقت اليوم</p>
+                    <p className="text-xs font-black text-slate-500">وقت اليوم</p>
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        className={`rounded-xl px-4 py-3 text-sm font-bold ${
+                        className={`rounded-2xl px-4 py-3 text-sm font-black ${
                           timeOfDay === "day"
                             ? "bg-emerald-600 text-white"
-                            : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                            : "bg-slate-100 text-slate-900 hover:bg-slate-200"
                         }`}
                         onClick={() => {
                           const next = "day" as const;
@@ -385,10 +501,10 @@ export function SurveyApp() {
                       </button>
                       <button
                         type="button"
-                        className={`rounded-xl px-4 py-3 text-sm font-bold ${
+                        className={`rounded-2xl px-4 py-3 text-sm font-black ${
                           timeOfDay === "night"
                             ? "bg-emerald-600 text-white"
-                            : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                            : "bg-slate-100 text-slate-900 hover:bg-slate-200"
                         }`}
                         onClick={() => {
                           const next = "night" as const;
@@ -406,59 +522,47 @@ export function SurveyApp() {
                   </div>
 
                   <div>
-                    <p className="text-xs font-semibold text-slate-500">الازدحام</p>
+                    <p className="text-xs font-black text-slate-500">الازدحام</p>
                     <div className="mt-2 grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        className={`rounded-xl px-3 py-3 text-sm font-bold ${
-                          trafficLevel === 1
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-800 hover:bg-slate-200"
-                        }`}
-                        onClick={() => setTrafficLevel(1)}
-                      >
-                        خفيف
-                      </button>
-                      <button
-                        type="button"
-                        className={`rounded-xl px-3 py-3 text-sm font-bold ${
-                          trafficLevel === 2
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-800 hover:bg-slate-200"
-                        }`}
-                        onClick={() => setTrafficLevel(2)}
-                      >
-                        متوسط
-                      </button>
-                      <button
-                        type="button"
-                        className={`rounded-xl px-3 py-3 text-sm font-bold ${
-                          trafficLevel === 3
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-800 hover:bg-slate-200"
-                        }`}
-                        onClick={() => setTrafficLevel(3)}
-                      >
-                        زحام
-                      </button>
+                      {[
+                        { v: 1 as const, label: "خفيف" },
+                        { v: 2 as const, label: "متوسط" },
+                        { v: 3 as const, label: "زحام" },
+                      ].map((t) => (
+                        <button
+                          key={t.v}
+                          type="button"
+                          className={`rounded-2xl px-3 py-3 text-sm font-black ${
+                            trafficLevel === t.v
+                              ? "bg-slate-900 text-white"
+                              : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                          }`}
+                          onClick={() => setTrafficLevel(t.v)}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
 
                 {suggestion && suggestion.count > 0 && suggestion.suggested_price ? (
-                  <p className="mt-3 text-xs text-slate-600">
-                    توفر بيانات لعدد{" "}
-                    <span className="font-bold text-slate-900">{suggestion.count}</span> رحلة مشابهة
-                    (ثقة{" "}
-                    <span className="font-bold text-slate-900">
-                      {Number(suggestion.confidence).toFixed(2)}
-                    </span>
-                    ).
-                  </p>
+                  <div className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
+                    <p className="text-xs font-black text-emerald-900">مرجع من بيانات مشابهة</p>
+                    <p className="mt-1 text-base font-black text-emerald-950">
+                      {formatIqd(suggestion.suggested_price)}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-emerald-900">
+                      {suggestion.count} رحلة | ثقة {Number(suggestion.confidence).toFixed(2)}
+                    </p>
+                  </div>
                 ) : (
-                  <p className="mt-3 text-xs text-slate-600">
-                    لا توجد بيانات كافية لرحلات مشابهة حتى الآن. السعر المبدئي يعتمد على المسافة.
-                  </p>
+                  <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                    <p className="text-xs font-black text-slate-700">أنت من أوائل المشاركين هنا</p>
+                    <p className="mt-1 text-xs font-semibold text-slate-600">
+                      لا توجد بيانات كافية لرحلات مشابهة بعد. سعرك سيحسّن المرجع للمستخدمين القادمين.
+                    </p>
+                  </div>
                 )}
               </section>
 
@@ -475,40 +579,55 @@ export function SurveyApp() {
               />
 
               {error && <p className="text-sm font-semibold text-rose-700">{error}</p>}
-              {successMessage && (
-                <p className="text-sm font-semibold text-emerald-700">{successMessage}</p>
-              )}
 
               <button
                 type="button"
                 className="w-full rounded-2xl bg-emerald-600 px-4 py-4 text-lg font-black text-white hover:bg-emerald-500 disabled:opacity-60"
                 onClick={submit}
-                disabled={submitting}
+                disabled={submitting || !resolvedPrice}
               >
-                {submitting ? "جاري الإرسال..." : "إرسال"}
+                {submitting ? "جاري الإرسال..." : resolvedPrice ? `إرسال (${formatIqd(resolvedPrice)})` : "إرسال"}
               </button>
 
-              {step === "done" && (
-                <button
-                  type="button"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50"
-                  onClick={() => {
-                    setStep("start");
-                    setStartPlace(null);
-                    setEndPlace(null);
-                    setSuggestion(null);
-                    setSelectedPrice(null);
-                    setCustomPrice("");
-                    setRouteInfo(null);
-                    setSuccessMessage(null);
-                    setError(null);
-                  }}
-                >
-                  إرسال رحلة جديدة
-                </button>
-              )}
+              <p className="text-xs font-semibold text-slate-500">
+                ملاحظة: نستخدم نقاط المسار + الوقت + الازدحام + السعر فقط لتحسين الاقتراحات. لا نطلب
+                تسجيل.
+              </p>
             </>
           )}
+
+          {showDone && (
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+              <h2 className="text-lg font-black text-emerald-950">تم الإرسال</h2>
+              <p className="mt-2 text-sm font-semibold text-emerald-900">
+                {successMessage ?? "شكراً لك! تم تسجيل السعر."}
+              </p>
+              <button
+                type="button"
+                className="mt-4 w-full rounded-2xl bg-slate-900 px-4 py-3 text-base font-black text-white hover:bg-slate-800"
+                onClick={() => {
+                  setStep("start");
+                  setStartPlace(null);
+                  setEndPlace(null);
+                  setSuggestion(null);
+                  setSelectedPrice(null);
+                  setCustomPrice("");
+                  setRouteInfo(null);
+                  setSuccessMessage(null);
+                  setError(null);
+                }}
+              >
+                إرسال رحلة جديدة
+              </button>
+            </section>
+          )}
+
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span className="font-semibold">© Survey</span>
+            <a href="/admin" className="font-bold text-slate-600 hover:underline">
+              دخول الإدارة
+            </a>
+          </div>
         </div>
       </div>
     </main>

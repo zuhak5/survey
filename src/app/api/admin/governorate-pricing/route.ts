@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertAdmin } from "@/lib/require-admin";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { jsonError } from "@/lib/http";
 import { governoratePricingUpsertSchema } from "@/lib/validators";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
   const adminState = await assertAdmin();
@@ -10,8 +10,8 @@ export async function GET() {
     return adminState.response;
   }
 
-  const adminClient = createSupabaseAdminClient();
-  const { data, error } = await adminClient
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
     .from("governorate_pricing")
     .select("*")
     .order("sort_order", { ascending: true });
@@ -35,7 +35,7 @@ export async function PUT(request: NextRequest) {
     return jsonError(parsed.error.issues[0]?.message ?? "Invalid payload", 400);
   }
 
-  const adminClient = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
 
   // Always attribute updates to the current admin user.
   const rows = parsed.data.rows.map((row) => ({
@@ -43,7 +43,7 @@ export async function PUT(request: NextRequest) {
     updated_by: adminState.user.id,
   }));
 
-  const upsert = await adminClient
+  const upsert = await supabase
     .from("governorate_pricing")
     .upsert(rows, { onConflict: "governorate_code" });
 
@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
     return jsonError(upsert.error.message, 500);
   }
 
-  const { data, error } = await adminClient
+  const { data, error } = await supabase
     .from("governorate_pricing")
     .select("*")
     .order("sort_order", { ascending: true });

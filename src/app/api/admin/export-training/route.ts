@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertAdmin } from "@/lib/require-admin";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { jsonError } from "@/lib/http";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function serializeCsv(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) {
@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const adminClient = createSupabaseAdminClient();
-    const { data: features, error: featureError } = await adminClient
+    const supabase = await createSupabaseServerClient();
+    const { data: features, error: featureError } = await supabase
       .from("feature_store")
       .select("*")
       .order("created_at", { ascending: false })
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const csv = serializeCsv((features ?? []) as Record<string, unknown>[]);
     const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
 
-    const { error: uploadError } = await adminClient.storage
+    const { error: uploadError } = await supabase.storage
       .from("training-exports")
       .upload(path, file, {
         contentType: "text/csv",
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       return jsonError(uploadError.message, 500);
     }
 
-    const { error: insertError } = await adminClient.from("training_exports").insert({
+    const { error: insertError } = await supabase.from("training_exports").insert({
       file_path: path,
       file_type: "csv",
       row_count: features?.length ?? 0,

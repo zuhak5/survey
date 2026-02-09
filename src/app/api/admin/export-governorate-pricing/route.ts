@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertAdmin } from "@/lib/require-admin";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { jsonError } from "@/lib/http";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function csvEscape(value: unknown): string {
   const str = value == null ? "" : String(value);
@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
     return adminState.response;
   }
 
-  const adminClient = createSupabaseAdminClient();
-  const { data, error } = await adminClient
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
     .from("governorate_pricing")
     .select("*")
     .order("sort_order", { ascending: true });

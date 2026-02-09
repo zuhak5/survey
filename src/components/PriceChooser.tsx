@@ -36,6 +36,10 @@ function buildWheelOptions(base: number): number[] {
   return options;
 }
 
+function roundTo(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
 export function PriceChooser({
   baselinePrice,
   suggestedPrice,
@@ -51,23 +55,55 @@ export function PriceChooser({
   const options = useMemo(() => buildWheelOptions(base), [base]);
   const selectValue = selectedPrice === null ? "" : String(selectedPrice);
 
+  const quickPresets = useMemo(() => {
+    const step = 500;
+    const mid = roundTo(base, step);
+    const low = Math.max(1_000, roundTo(mid - 1_000, step));
+    const high = roundTo(mid + 1_000, step);
+    return [low, mid, high];
+  }, [base]);
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-extrabold text-slate-900">اختر السعر</h3>
+      <h3 className="text-lg font-extrabold text-slate-900">كم كان سعر المشوار؟</h3>
       {suggestedPrice ? (
         <p className="mt-1 text-sm text-slate-600">
-          سعر مقترح: <span className="font-bold text-slate-900">{formatIqd(suggestedPrice)}</span>
+          مرجع من رحلات مشابهة:{" "}
+          <span className="font-bold text-slate-900">{formatIqd(suggestedPrice)}</span>
         </p>
       ) : (
         <p className="mt-1 text-sm text-slate-600">
-          سعر مبدئي حسب المسافة:{" "}
+          مرجع مبني على المسافة:{" "}
           <span className="font-bold text-slate-900">{formatIqd(baselinePrice)}</span>
         </p>
       )}
 
-      <label className="mt-4 block text-xs font-semibold text-slate-500">عجلة السعر</label>
+      <div className="mt-4">
+        <p className="text-xs font-semibold text-slate-500">اختيار سريع</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {quickPresets.map((value) => {
+            const active = selectedPrice === value && customPrice.trim().length === 0;
+            return (
+              <button
+                key={value}
+                type="button"
+                className={`rounded-2xl px-3 py-3 text-sm font-black ring-1 transition ${
+                  active
+                    ? "bg-emerald-600 text-white ring-emerald-600"
+                    : "bg-slate-50 text-slate-900 ring-slate-200 hover:bg-slate-100"
+                }`}
+                onClick={() => onSelectPrice(value)}
+              >
+                {formatIqd(value)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <label className="mt-4 block text-xs font-semibold text-slate-500">عجلة السعر (اختياري)</label>
       <select
-        className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base font-bold text-slate-900"
+        className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-base font-black text-slate-900"
         value={selectValue}
         onChange={(event) => {
           const value = Number(event.target.value);
@@ -93,7 +129,7 @@ export function PriceChooser({
         inputMode="numeric"
         type="number"
         min={1_000}
-        className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-base text-slate-900 outline-none focus:border-emerald-500"
+        className="mt-2 w-full rounded-2xl border border-slate-300 px-3 py-3 text-base font-bold text-slate-900 outline-none focus:border-emerald-500"
         placeholder="مثال: 9000"
         value={customPrice}
         onChange={(event) => onCustomPrice(event.target.value)}

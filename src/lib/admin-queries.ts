@@ -1,10 +1,12 @@
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { ClusterFilters } from "@/lib/validators";
 import type { RouteCluster } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function fetchClustersForAdmin(filters: ClusterFilters): Promise<RouteCluster[]> {
-  const adminClient = createSupabaseAdminClient();
-  let query = adminClient
+export async function fetchClustersForAdmin(
+  client: SupabaseClient,
+  filters: ClusterFilters,
+): Promise<RouteCluster[]> {
+  let query = client
     .from("route_clusters")
     .select("*")
     .order("sample_count", { ascending: false })

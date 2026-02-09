@@ -582,7 +582,7 @@ export function MapPicker({
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div ref={mapElementRef} className="h-[340px] w-full" />
+      <div ref={mapElementRef} className="h-[420px] w-full sm:h-[520px]" />
 
       {!mapReady && (
         <div className="absolute inset-0 grid place-items-center bg-white/70 backdrop-blur">

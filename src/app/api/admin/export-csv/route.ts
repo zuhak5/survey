@@ -3,6 +3,7 @@ import { assertAdmin } from "@/lib/require-admin";
 import { clusterFilterSchema } from "@/lib/validators";
 import { clustersToCsv, fetchClustersForAdmin } from "@/lib/admin-queries";
 import { jsonError } from "@/lib/http";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const adminState = await assertAdmin(request);
@@ -17,7 +18,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const clusters = await fetchClustersForAdmin(parsed.data);
+    const supabase = await createSupabaseServerClient();
+    const clusters = await fetchClustersForAdmin(supabase, parsed.data);
     const csv = clustersToCsv(clusters);
 
     return new NextResponse(csv, {

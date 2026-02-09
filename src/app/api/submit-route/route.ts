@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { haversineDistanceMeters } from "@/lib/pricing";
 import { jsonError } from "@/lib/http";
 import { serverEnv } from "@/lib/env";
@@ -55,7 +56,9 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const dbClient = createSupabaseAdminClient();
+  const dbClient = serverEnv.SUPABASE_SERVICE_ROLE_KEY
+    ? createSupabaseAdminClient()
+    : createSupabasePublicClient();
   const submissionRow = {
     driver_id: null,
     client_request_id: payload.client_request_id,
