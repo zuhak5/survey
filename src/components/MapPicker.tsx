@@ -24,6 +24,74 @@ type MapPickerProps = {
 
 const baghdadCenter = { lat: 33.3152, lng: 44.3661 };
 
+function isPlusCodePrefix(value: string): boolean {
+  // Open Location Code alphabet: 23456789CFGHJMPQRVWX
+  // Example formatted address: "8CGG+83X، بغداد، ..."
+  return /^[23456789CFGHJMPQRVWX]{4,}\+[23456789CFGHJMPQRVWX]{2,}/i.test(value.trim());
+}
+
+function stripPlusCodePrefix(value: string): string {
+  return value.replace(
+    /^[23456789CFGHJMPQRVWX]{4,}\+[23456789CFGHJMPQRVWX]{2,}\s*[،,]\s*/i,
+    "",
+  );
+}
+
+function bestComponent(
+  components: google.maps.GeocoderAddressComponent[] | undefined,
+  ...types: string[]
+): string | null {
+  if (!components) {
+    return null;
+  }
+  for (const t of types) {
+    const found = components.find((c) => c.types.includes(t));
+    if (found?.long_name) {
+      return found.long_name;
+    }
+  }
+  return null;
+}
+
+function buildAreaLabel(result: google.maps.GeocoderResult): string | null {
+  const components = result.address_components;
+
+  const area =
+    bestComponent(components, "neighborhood") ??
+    bestComponent(components, "sublocality_level_1", "sublocality") ??
+    bestComponent(components, "route") ??
+    bestComponent(components, "premise", "point_of_interest", "establishment");
+
+  const city =
+    bestComponent(components, "locality") ??
+    bestComponent(components, "administrative_area_level_2") ??
+    bestComponent(components, "administrative_area_level_1");
+
+  if (area && city && area !== city) {
+    return `${area}، ${city}`;
+  }
+  return area ?? city ?? null;
+}
+
+function scoreGeocoderResult(result: google.maps.GeocoderResult): number {
+  // Prefer human-friendly "area" labels over postal/admin-only results.
+  const types = new Set(result.types ?? []);
+  let score = 0;
+
+  if (types.has("neighborhood")) score += 100;
+  if (types.has("sublocality_level_1") || types.has("sublocality")) score += 90;
+  if (types.has("route") || types.has("street_address") || types.has("intersection")) score += 80;
+  if (types.has("premise") || types.has("point_of_interest") || types.has("establishment"))
+    score += 70;
+  if (types.has("locality") || types.has("administrative_area_level_2")) score += 60;
+  if (types.has("administrative_area_level_1")) score += 50;
+
+  const label = buildAreaLabel(result);
+  if (label) score += Math.min(20, label.length); // slight bias towards labels with content
+
+  return score;
+}
+
 function estimateEtaSeconds(
   distanceMeters: number,
   timeOfDay: "day" | "night",
@@ -107,7 +175,34 @@ export function MapPicker({
 
     try {
       const response = await geocoderRef.current.geocode({ location: point });
-      return response.results[0]?.formatted_address ?? null;
+      const results = response.results ?? [];
+      if (results.length === 0) {
+        return null;
+      }
+
+      const nonPlus = results.filter((r) => !isPlusCodePrefix(r.formatted_address ?? ""));
+      const candidates = nonPlus.length > 0 ? nonPlus : results;
+
+      let best = candidates[0]!;
+      let bestScore = scoreGeocoderResult(best);
+      for (const r of candidates.slice(1)) {
+        const s = scoreGeocoderResult(r);
+        if (s > bestScore) {
+          best = r;
+          bestScore = s;
+        }
+      }
+
+      const labelFromComponents = buildAreaLabel(best);
+      if (labelFromComponents) {
+        return labelFromComponents;
+      }
+
+      const formatted = best.formatted_address ?? results[0]?.formatted_address ?? null;
+      if (!formatted) {
+        return null;
+      }
+      return isPlusCodePrefix(formatted) ? stripPlusCodePrefix(formatted) : formatted;
     } catch {
       return null;
     }
