@@ -1,5 +1,4 @@
 import { jsonError } from "@/lib/http";
-import { isAdminUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function assertAdmin() {
@@ -13,7 +12,8 @@ export async function assertAdmin() {
     return { ok: false as const, response: jsonError("Authentication required", 401) };
   }
 
-  if (!isAdminUser(user)) {
+  const { data: isAdmin, error: isAdminError } = await supabase.rpc("is_admin");
+  if (isAdminError || !isAdmin) {
     return { ok: false as const, response: jsonError("Admin role required", 403) };
   }
 

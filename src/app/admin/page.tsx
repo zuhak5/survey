@@ -1,7 +1,6 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isAdminUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +32,15 @@ export default async function AdminPage() {
     );
   }
 
-  if (!isAdminUser(user)) {
+  const { data: isAdmin } = await supabase.rpc("is_admin");
+
+  if (!isAdmin) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
           <h1 className="text-xl font-bold text-amber-900">صلاحية غير كافية</h1>
           <p className="mt-2 text-sm text-amber-800">
-            يجب أن يحتوي حسابك على `app_metadata.role = admin`.
+            أضف معرّف المستخدم (auth.users.id) إلى جدول `public.admin_users` لمنح صلاحية الإدارة.
           </p>
         </div>
       </main>

@@ -52,7 +52,12 @@ values
     '{}',
     now(),
     now()
-  )
+)
+on conflict (id) do nothing;
+
+-- Grant admin access via allow-list table.
+insert into public.admin_users (id)
+values ('00000000-0000-0000-0000-0000000000c1')
 on conflict (id) do nothing;
 
 -- Driver A inserts one submission

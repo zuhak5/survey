@@ -90,7 +90,7 @@ ML-ready prediction endpoint. For MVP it returns the suggest-price result plus s
 
 ## Admin APIs
 
-All admin endpoints require authenticated user with `app_metadata.role = "admin"`.
+All admin endpoints require an authenticated user that exists in `public.admin_users`.
 
 - `GET /api/admin/clusters` - filtered cluster table data for dashboard.
 - `GET /api/admin/export-csv` - CSV export of filtered cluster rows.

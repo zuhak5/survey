@@ -113,7 +113,7 @@ Core endpoints:
 
 ## Security (RLS)
 
-- Admin (`app_metadata.role = "admin"`):
+- Admin (exists in `public.admin_users`):
   - read/aggregate all data
   - write cluster/feature/training metadata
 - Public survey flow:
@@ -146,14 +146,11 @@ npm run load:test
 
 ## Admin Access
 
-Set admin claim in Supabase Auth:
+1. Create an admin user in Supabase Auth (email + password).
+2. Grant admin access by inserting the user's id into `public.admin_users`:
 
-```json
-{
-  "app_metadata": {
-    "role": "admin"
-  }
-}
+```sql
+insert into public.admin_users (id) values ('00000000-0000-0000-0000-000000000000');
 ```
 
 ## Definition of Done Checklist
