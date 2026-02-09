@@ -1,0 +1,9 @@
+-- Bootstrap admin user (sanitized).
+--
+-- This migration was executed once against the production database to create/confirm the
+-- initial admin and add them to `public.admin_users`.
+--
+-- Intentionally left blank to avoid storing credentials in git.
+--
+-- To grant admin access for a user:
+--   insert into public.admin_users (id) values (''<auth.users.id>'') on conflict do nothing;
