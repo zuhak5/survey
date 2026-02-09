@@ -45,6 +45,14 @@ export type GovernoratePricing = {
   surge_cap: number;
   rounding_step_iqd: number;
   notes: string | null;
+  submission_count: number;
+  baseline_count: number;
+  jam_count: number;
+  night_count: number;
+  fit_sample_count: number;
+  fit_mae_iqd: number | null;
+  fit_rmse_iqd: number | null;
+  last_submission_at: string | null;
   updated_by: string | null;
   updated_at: string;
 };

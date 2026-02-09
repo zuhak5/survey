@@ -102,7 +102,7 @@ export function AdminDashboard(props: { initialGovernoratePricing: GovernoratePr
       return;
     }
     setMessage(
-      `اكتمل التجميع: ${payload.clusters_refreshed} تجمع، و ${payload.feature_rows_upserted} سجل ميزات.`,
+      `اكتمل التجميع: ${payload.clusters_refreshed} تجمع، و ${payload.feature_rows_upserted} سجل ميزات، و ${payload.governorates_refreshed} محافظة تم تحديث تسعيرها.`,
     );
     await fetchClusters();
   }

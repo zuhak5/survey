@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { publicEnv } from "@/lib/env";
+import { governorateCodeFromName } from "@/lib/iraq-governorates";
 import { haversineDistanceMeters, type LatLng } from "@/lib/pricing";
 
 export type RouteInfo = {
@@ -11,11 +12,17 @@ export type RouteInfo = {
   provider: "google" | "approx";
 };
 
+export type PlaceInfo = {
+  label: string | null;
+  governorate_code: string | null;
+  governorate_name: string | null;
+};
+
 type MapPickerProps = {
   start: LatLng | null;
   end: LatLng | null;
   activeStep: "start" | "end";
-  onSelectPoint: (kind: "start" | "end", point: LatLng, label: string | null) => void;
+  onSelectPoint: (kind: "start" | "end", point: LatLng, place: PlaceInfo) => void;
   selectionEnabled: boolean;
   timeOfDay: "day" | "night";
   trafficLevel: 1 | 2 | 3;
@@ -171,16 +178,16 @@ export function MapPicker({
     !publicEnv.NEXT_PUBLIC_DISABLE_MAPS &&
     publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.trim().length > 0;
 
-  async function reverseGeocode(point: LatLng): Promise<string | null> {
+  async function reverseGeocode(point: LatLng): Promise<PlaceInfo> {
     if (!geocoderRef.current) {
-      return null;
+      return { label: null, governorate_code: null, governorate_name: null };
     }
 
     try {
       const response = await geocoderRef.current.geocode({ location: point });
       const results = response.results ?? [];
       if (results.length === 0) {
-        return null;
+        return { label: null, governorate_code: null, governorate_name: null };
       }
 
       const nonPlus = results.filter((r) => !isPlusCodePrefix(r.formatted_address ?? ""));
@@ -196,18 +203,25 @@ export function MapPicker({
         }
       }
 
+      const governorateName = bestComponent(best.address_components, "administrative_area_level_1");
+      const governorateCode = governorateCodeFromName(governorateName);
+
       const labelFromComponents = buildAreaLabel(best);
-      if (labelFromComponents) {
-        return labelFromComponents;
-      }
 
       const formatted = best.formatted_address ?? results[0]?.formatted_address ?? null;
-      if (!formatted) {
-        return null;
-      }
-      return isPlusCodePrefix(formatted) ? stripPlusCodePrefix(formatted) : formatted;
+      const formattedLabel = formatted
+        ? isPlusCodePrefix(formatted)
+          ? stripPlusCodePrefix(formatted)
+          : formatted
+        : null;
+
+      return {
+        label: labelFromComponents ?? formattedLabel,
+        governorate_code: governorateCode,
+        governorate_name: governorateName ?? null,
+      };
     } catch {
-      return null;
+      return { label: null, governorate_code: null, governorate_name: null };
     }
   }
 
@@ -259,8 +273,8 @@ export function MapPicker({
         }
 
         if (mode === "select" && selectionEnabledRef.current) {
-          const label = await reverseGeocode(point);
-          onSelectPointRef.current(activeStepRef.current, point, label);
+          const place = await reverseGeocode(point);
+          onSelectPointRef.current(activeStepRef.current, point, place);
         }
 
         setLocating(false);
@@ -347,8 +361,8 @@ export function MapPicker({
             }
 
             const point = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-            const label = await reverseGeocode(point);
-            onSelectPointRef.current(activeStepRef.current, point, label);
+            const place = await reverseGeocode(point);
+            onSelectPointRef.current(activeStepRef.current, point, place);
           },
         );
 
@@ -552,7 +566,11 @@ export function MapPicker({
             onSelectPoint(
               activeStep,
               { lat: fallbackLat, lng: fallbackLng },
-              `${fallbackLat.toFixed(5)}, ${fallbackLng.toFixed(5)}`,
+              {
+                label: `${fallbackLat.toFixed(5)}, ${fallbackLng.toFixed(5)}`,
+                governorate_code: null,
+                governorate_name: null,
+              },
             )
           }
         >

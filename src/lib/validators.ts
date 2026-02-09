@@ -11,6 +11,8 @@ export const submitRouteSchema = z.object({
   end: latLngSchema,
   start_label: z.string().trim().min(1).max(200).optional(),
   end_label: z.string().trim().min(1).max(200).optional(),
+  start_governorate_code: z.string().trim().min(2).max(40).optional(),
+  end_governorate_code: z.string().trim().min(2).max(40).optional(),
   time_of_day: z.enum(["day", "night"]),
   traffic_level: z.number().int().min(1).max(3),
   eta_s: z.number().int().min(0).max(86_400).optional(),

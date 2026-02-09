@@ -33,8 +33,6 @@ type ApiResponse = { rows: GovernoratePricing[] };
 export function GovernoratePricingPanel(props: { initialRows: GovernoratePricing[] }) {
   const [rows, setRows] = useState<GovernoratePricing[]>(() => props.initialRows ?? []);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const fetchRows = useCallback(async (opts?: { silent?: boolean }) => {
@@ -53,7 +51,6 @@ export function GovernoratePricingPanel(props: { initialRows: GovernoratePricing
       }
 
       setRows(payload.rows ?? []);
-      setDirty(false);
       setLoading(false);
     } catch {
       setMessage("فشل تحميل تسعير المحافظات.");
@@ -71,47 +68,32 @@ export function GovernoratePricingPanel(props: { initialRows: GovernoratePricing
     }, {});
   }, [rows]);
 
-  function updateRow(code: string, patch: Partial<GovernoratePricing>) {
-    setRows((prev) =>
-      prev.map((row) => (row.governorate_code === code ? { ...row, ...patch } : row)),
-    );
-    setDirty(true);
-  }
+  const nf = useMemo(() => new Intl.NumberFormat("ar-IQ"), []);
 
-  async function save() {
-    setSaving(true);
-    setMessage(null);
-    try {
-      const response = await fetch("/api/admin/governorate-pricing", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
-      });
-      const payload = (await response.json()) as ApiResponse & { status?: string; error?: string };
-      if (!response.ok) {
-        setMessage(payload.error ?? "فشل حفظ التسعير.");
-        setSaving(false);
-        return;
-      }
+  const df = useMemo(
+    () =>
+      new Intl.DateTimeFormat("ar-IQ", {
+        dateStyle: "short",
+        timeStyle: "short",
+      }),
+    [],
+  );
 
-      setRows(payload.rows ?? rows);
-      setDirty(false);
-      setMessage("تم حفظ تسعير المحافظات.");
-      setSaving(false);
-    } catch {
-      setMessage("فشل حفظ التسعير.");
-      setSaving(false);
-    }
+  function fmtDate(value: string | null | undefined): string {
+    if (!value) return "-";
+    const ms = Date.parse(value);
+    if (!Number.isFinite(ms)) return "-";
+    return df.format(new Date(ms));
   }
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-extrabold text-slate-900">تسعير المحافظات (العراق)</h2>
+          <h2 className="text-lg font-extrabold text-slate-900">تحليل التسعير حسب المحافظة (العراق)</h2>
           <p className="mt-1 text-sm text-slate-600">
-            عدّل التسعيرة الأساسية والزمنية والمسافة وحدود الـ Surge. المعاينات تساعدك على رؤية الناتج
-            بسرعة.
+            هذه الأرقام تُحسب تلقائياً من استبيانات السائقين لمساعدتك في بناء نظام التسعير لتطبيق
+            المشاوير. (Baseline: نهار + ازدحام متوسط).
           </p>
         </div>
 
@@ -120,121 +102,68 @@ export function GovernoratePricingPanel(props: { initialRows: GovernoratePricing
             type="button"
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
             onClick={() => void fetchRows()}
-            disabled={loading || saving}
+            disabled={loading}
           >
             {loading ? "..." : "تحديث"}
           </button>
-          <button
-            type="button"
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            onClick={() => void save()}
-            disabled={saving || loading || !dirty}
+          <a
+            href="/api/admin/export-governorate-pricing"
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
           >
-            {saving ? "جاري الحفظ..." : dirty ? "حفظ التغييرات" : "محفوظ"}
-          </button>
+            تنزيل CSV
+          </a>
         </div>
       </div>
 
       {message && <p className="mt-3 text-sm font-semibold text-slate-700">{message}</p>}
 
       <div className="mt-4 overflow-auto rounded-xl border border-slate-200">
-        <table className="min-w-[980px] w-full border-collapse text-sm">
+        <table className="min-w-[1280px] w-full border-collapse text-sm">
           <thead className="bg-slate-100 text-right text-slate-700">
             <tr>
               <th className="px-3 py-2">المحافظة</th>
+              <th className="px-3 py-2">الاستبيانات</th>
+              <th className="px-3 py-2">Baseline</th>
+              <th className="px-3 py-2">ازدحام شديد</th>
+              <th className="px-3 py-2">ليل</th>
+              <th className="px-3 py-2">عينات الملاءمة</th>
+              <th className="px-3 py-2">MAE</th>
               <th className="px-3 py-2">الأجرة الأساسية</th>
               <th className="px-3 py-2">الزمن / دقيقة</th>
               <th className="px-3 py-2">المسافة / كم</th>
               <th className="px-3 py-2">الحد الأدنى</th>
               <th className="px-3 py-2">معامل Surge</th>
               <th className="px-3 py-2">حد Surge</th>
-              <th className="px-3 py-2">خطوة التقريب</th>
               <th className="px-3 py-2">مثال 5كم / 10د</th>
               <th className="px-3 py-2">مثال 1.5كم / 6د</th>
+              <th className="px-3 py-2">آخر استبيان</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => {
               const ex = examples[row.governorate_code];
+              const mae = row.fit_mae_iqd == null ? null : Number(row.fit_mae_iqd);
               return (
                 <tr key={row.governorate_code} className="border-t border-slate-100">
                   <td className="px-3 py-2 font-bold text-slate-900">{row.name_ar}</td>
 
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-28 rounded-lg border border-slate-300 px-2 py-2 text-right font-semibold outline-none focus:border-emerald-500"
-                      value={row.base_fare_iqd}
-                      onChange={(e) => updateRow(row.governorate_code, { base_fare_iqd: Number(e.target.value) })}
-                    />
+                  <td className="px-3 py-2 font-semibold">{nf.format(row.submission_count ?? 0)}</td>
+                  <td className="px-3 py-2 font-semibold">{nf.format(row.baseline_count ?? 0)}</td>
+                  <td className="px-3 py-2 font-semibold">{nf.format(row.jam_count ?? 0)}</td>
+                  <td className="px-3 py-2 font-semibold">{nf.format(row.night_count ?? 0)}</td>
+                  <td className="px-3 py-2 font-semibold">{nf.format(row.fit_sample_count ?? 0)}</td>
+                  <td className="px-3 py-2 font-semibold">{mae == null ? "-" : `${toIqd(mae)} د.ع`}</td>
+
+                  <td className="px-3 py-2 font-extrabold text-slate-900">{toIqd(Number(row.base_fare_iqd))}</td>
+                  <td className="px-3 py-2 font-extrabold text-slate-900">{toIqd(Number(row.time_fare_iqd_per_min))}</td>
+                  <td className="px-3 py-2 font-extrabold text-slate-900">{toIqd(Number(row.distance_fare_iqd_per_km))}</td>
+                  <td className="px-3 py-2 font-extrabold text-slate-900">{toIqd(Number(row.minimum_fare_iqd))}</td>
+
+                  <td className="px-3 py-2 font-extrabold text-slate-900">
+                    {Number(row.surge_multiplier).toFixed(2)}
                   </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-28 rounded-lg border border-slate-300 px-2 py-2 text-right font-semibold outline-none focus:border-emerald-500"
-                      value={row.time_fare_iqd_per_min}
-                      onChange={(e) =>
-                        updateRow(row.governorate_code, { time_fare_iqd_per_min: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-28 rounded-lg border border-slate-300 px-2 py-2 text-right font-semibold outline-none focus:border-emerald-500"
-                      value={row.distance_fare_iqd_per_km}
-                      onChange={(e) =>
-                        updateRow(row.governorate_code, { distance_fare_iqd_per_km: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-28 rounded-lg border border-slate-300 px-2 py-2 text-right font-semibold outline-none focus:border-emerald-500"
-                      value={row.minimum_fare_iqd}
-                      onChange={(e) =>
-                        updateRow(row.governorate_code, { minimum_fare_iqd: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={1}
-                      step={0.05}
-                      className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-right font-semibold outline-none focus:border-emerald-500"
-                      value={row.surge_multiplier}
-                      onChange={(e) =>
-                        updateRow(row.governorate_code, { surge_multiplier: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={1}
-                      step={0.05}
-                      className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-right font-semibold outline-none focus:border-emerald-500"
-                      value={row.surge_cap}
-                      onChange={(e) => updateRow(row.governorate_code, { surge_cap: Number(e.target.value) })}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      min={1}
-                      step={50}
-                      className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-right font-semibold outline-none focus:border-emerald-500"
-                      value={row.rounding_step_iqd}
-                      onChange={(e) =>
-                        updateRow(row.governorate_code, { rounding_step_iqd: Number(e.target.value) })
-                      }
-                    />
+                  <td className="px-3 py-2 font-extrabold text-slate-900">
+                    {Number(row.surge_cap).toFixed(2)}
                   </td>
 
                   <td className="px-3 py-2 text-slate-800">
@@ -251,6 +180,8 @@ export function GovernoratePricingPanel(props: { initialRows: GovernoratePricing
                       "-"
                     )}
                   </td>
+
+                  <td className="px-3 py-2 text-slate-700">{fmtDate(row.last_submission_at)}</td>
                 </tr>
               );
             })}

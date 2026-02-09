@@ -26,9 +26,16 @@ if (featureRun.error) {
   process.exit(1);
 }
 
+const governorateRun = await client.rpc("refresh_governorate_pricing");
+if (governorateRun.error) {
+  console.error(governorateRun.error.message);
+  process.exit(1);
+}
+
 console.log({
   startedAt,
   finishedAt: new Date().toISOString(),
   clusters_refreshed: Number(clusterRun.data ?? 0),
   feature_rows_upserted: Number(featureRun.data ?? 0),
+  governorates_refreshed: Number(governorateRun.data ?? 0),
 });

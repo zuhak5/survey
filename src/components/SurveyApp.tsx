@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapPicker, type RouteInfo } from "@/components/MapPicker";
+import { MapPicker, type PlaceInfo, type RouteInfo } from "@/components/MapPicker";
 import { PriceChooser } from "@/components/PriceChooser";
 import {
   derivePresetPrices,
@@ -14,6 +14,8 @@ type Step = "start" | "end" | "details" | "done";
 type PlaceState = {
   point: LatLng;
   label: string | null;
+  governorate_code: string | null;
+  governorate_name: string | null;
 };
 
 type Suggestion = {
@@ -148,12 +150,17 @@ export function SurveyApp() {
   );
 
   const onSelectPoint = useCallback(
-    (kind: "start" | "end", point: LatLng, label: string | null) => {
+    (kind: "start" | "end", point: LatLng, place: PlaceInfo) => {
       setError(null);
       setSuccessMessage(null);
 
       if (kind === "start") {
-        const nextStart = { point, label };
+        const nextStart = {
+          point,
+          label: place.label,
+          governorate_code: place.governorate_code,
+          governorate_name: place.governorate_name,
+        };
         startPlaceRef.current = nextStart;
         setStartPlace(nextStart);
         setEndPlace(null);
@@ -166,7 +173,12 @@ export function SurveyApp() {
         return;
       }
 
-      const nextEnd = { point, label };
+      const nextEnd = {
+        point,
+        label: place.label,
+        governorate_code: place.governorate_code,
+        governorate_name: place.governorate_name,
+      };
       endPlaceRef.current = nextEnd;
       setEndPlace(nextEnd);
       const currentStart = startPlaceRef.current;
@@ -218,6 +230,8 @@ export function SurveyApp() {
         end: endPlace.point,
         start_label: startPlace.label ?? undefined,
         end_label: endPlace.label ?? undefined,
+        start_governorate_code: startPlace.governorate_code ?? undefined,
+        end_governorate_code: endPlace.governorate_code ?? undefined,
         time_of_day: timeOfDay,
         traffic_level: trafficLevel,
         eta_s: routeInfo?.eta_s ?? undefined,

@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
     end_lng: payload.end.lng,
     start_label: payload.start_label ?? null,
     end_label: payload.end_label ?? null,
+    start_governorate_code: payload.start_governorate_code ?? null,
+    end_governorate_code: payload.end_governorate_code ?? null,
     price: payload.price,
     distance_m,
     eta_s: payload.eta_s ?? null,
