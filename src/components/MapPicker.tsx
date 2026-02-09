@@ -152,11 +152,14 @@ export function MapPicker({
 
   const startMarkerRef = useRef<google.maps.Marker | null>(null);
   const endMarkerRef = useRef<google.maps.Marker | null>(null);
+  const myLocationMarkerRef = useRef<google.maps.Marker | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
 
   const [mapReady, setMapReady] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
 
   const selectionEnabledRef = useRef(selectionEnabled);
   const activeStepRef = useRef(activeStep);
@@ -206,6 +209,74 @@ export function MapPicker({
     } catch {
       return null;
     }
+  }
+
+  async function goToCurrentLocation(mode: "pan" | "select") {
+    if (locating) {
+      return;
+    }
+
+    setLocating(true);
+    setLocateError(null);
+
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setLocateError("المتصفح لا يدعم تحديد الموقع.");
+      setLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const point = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+
+        if (mapRef.current) {
+          mapRef.current.panTo(point);
+          const currentZoom = mapRef.current.getZoom() ?? 13;
+          mapRef.current.setZoom(Math.max(currentZoom, 16));
+        }
+
+        if (mapRef.current && mapReady) {
+          if (!myLocationMarkerRef.current) {
+            myLocationMarkerRef.current = new google.maps.Marker({
+              map: mapRef.current,
+              clickable: false,
+              zIndex: 10_000,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: "#2563eb",
+                fillOpacity: 0.95,
+                strokeColor: "#ffffff",
+                strokeOpacity: 1,
+                strokeWeight: 3,
+              },
+            });
+          }
+          myLocationMarkerRef.current.setPosition(point);
+        }
+
+        if (mode === "select" && selectionEnabledRef.current) {
+          const label = await reverseGeocode(point);
+          onSelectPointRef.current(activeStepRef.current, point, label);
+        }
+
+        setLocating(false);
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocateError("يرجى السماح بالوصول إلى الموقع.");
+        } else if (error.code === error.TIMEOUT) {
+          setLocateError("انتهت مهلة تحديد الموقع.");
+        } else {
+          setLocateError("تعذر تحديد الموقع.");
+        }
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    );
   }
 
   useEffect(() => {
@@ -289,6 +360,9 @@ export function MapPicker({
       mounted = false;
       clickListenerRef.current?.remove();
       clickListenerRef.current = null;
+
+      myLocationMarkerRef.current?.setMap(null);
+      myLocationMarkerRef.current = null;
     };
   }, [mapsEnabled]);
 
@@ -443,6 +517,17 @@ export function MapPicker({
           الخريطة غير مفعّلة. أدخل الإحداثيات لاختيار{" "}
           {activeStep === "start" ? "نقطة الانطلاق" : "نقطة الوصول"}.
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
+            disabled={locating}
+            onClick={() => void goToCurrentLocation("pan")}
+          >
+            {locating ? "..." : "استخدم موقعي"}
+          </button>
+          {locateError && <span className="text-xs font-semibold text-rose-700">{locateError}</span>}
+        </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input
             type="number"
@@ -490,6 +575,23 @@ export function MapPicker({
       {mapReady && selectionEnabled && (
         <div className="pointer-events-none absolute right-3 top-3 rounded-2xl bg-white/85 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur">
           {activeStep === "start" ? "اضغط لتحديد الانطلاق" : "اضغط لتحديد الوصول"}
+        </div>
+      )}
+
+      {mapReady && (
+        <button
+          type="button"
+          className="absolute bottom-3 right-3 rounded-2xl bg-white/90 px-4 py-2 text-xs font-bold text-slate-800 shadow-sm ring-1 ring-slate-200 hover:bg-white disabled:opacity-60"
+          onClick={() => void goToCurrentLocation(selectionEnabled ? "select" : "pan")}
+          disabled={locating}
+        >
+          {locating ? "..." : "موقعي"}
+        </button>
+      )}
+
+      {mapReady && locateError && (
+        <div className="pointer-events-none absolute bottom-3 left-3 rounded-2xl bg-rose-700/90 px-3 py-2 text-xs font-semibold text-white shadow-sm">
+          {locateError}
         </div>
       )}
     </div>
